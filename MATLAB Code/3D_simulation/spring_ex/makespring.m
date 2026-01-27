@@ -1,8 +1,8 @@
 function [A,B,C,D,sp] = makespring()
 % GEN PARAMS
-sp.m = 2;      % kg
-sp.k = 0.1;    % N/m
-sp.b = 1;      % N*s/m
+sp.m = 1;      % kg
+sp.k = 50;    % N/m
+sp.b = 2;      % N*s/m
 
 % MATRICES
 A = [0, 1; -sp.k/sp.m, -sp.b/sp.m];
