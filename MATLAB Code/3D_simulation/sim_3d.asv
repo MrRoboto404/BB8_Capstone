@@ -1,0 +1,28 @@
+% Last updated: 1/28
+
+% Purpose: run simulink models via typical matlab file
+
+% Clean up
+clear; clc; close all;
+
+% Run linear model------------------------------------------------------
+
+% Construct & load params
+[A, B, C, D, ~] = make_ballbot();
+ics = [0; 0; 0; 0]; % initial conditions in minimal coords
+
+
+% Input parameters into simulink model
+mdl = "main_sim.slx";
+simIn = Simulink.SimulationInput(mdl);
+
+set_param(mdl, "EnablePacing", "on"); % slow down pacing
+simIn.setVariable("A", A);
+simIn.setVariable("B", B);
+simIn.setVariable("C", C);
+simIn.setVariable("D", D);
+simIn.setVariable("ics", ics);
+end
+
+% Run sim
+out = sim(simIn);
