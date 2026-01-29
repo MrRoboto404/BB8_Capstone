@@ -8,21 +8,61 @@ clear; clc; close all;
 % Run linear model------------------------------------------------------
 
 % Construct & load params
-[A, B, C, D, ~] = make_ballbot();
-ics = [0; 0; 0; 0]; % initial conditions in minimal coords
+[A_yz, B_yz, C_yz, D_yz, ~] = make_ballbot();
+ics_yz = [0; 0; 0; 0]; % initial conditions in minimal coords
 
 
 % Input parameters into simulink model
-mdl = "main_sim.slx";
+mdl = "main_sim";
 simIn = Simulink.SimulationInput(mdl);
 
-set_param(mdl, "EnablePacing", "on"); % slow down pacing
-simIn.setVariable("A", A);
-simIn.setVariable("B", B);
-simIn.setVariable("C", C);
-simIn.setVariable("D", D);
-simIn.setVariable("ics", ics);
-end
+world = sim3d.World('Output',@outputImpl,'Update', @updateImpl); % make world
+createAxes(world, 'MATLAB');
+viewport = createViewport(world);
+viewport.Translation = [-4 2 1];
+viewport.Rotation = [0 0 -pi/8];
 
-% Run sim
+set_param(mdl, "EnablePacing", "on"); % slow down pacing to file: 0.8x
+simIn = setModelParameter(simIn, "StopTime", "10"); % configure run time (s)
+
+simIn = simIn.setVariable("A", A_yz);
+simIn = simIn.setVariable("B", B_yz);
+simIn = simIn.setVariable("C", C_yz);
+simIn = simIn.setVariable("D", D_yz);
+simIn = simIn.setVariable("ics", ics_yz);
+
+% Run sim & vis
 out = sim(simIn);
+
+
+
+
+
+function createAxes(world, csys)
+    % Creates a triad to show the world axes
+    % Axes X, Y, Z represented by colors R, G, B respectively
+    xA = sim3d.Actor(ActorName='XAxis');
+    yA = sim3d.Actor(ActorName='YAxis');
+    zA = sim3d.Actor(ActorName='ZAxis');
+
+    xA.CoordinateSystem = csys;
+    yA.CoordinateSystem = csys;
+    zA.CoordinateSystem = csys;
+
+    createShape(xA,'box',[5 0.02 0.02]);
+    createShape(yA,'box',[0.02 5 0.02]);
+    createShape(zA,'box',[0.02 0.02 5]);
+
+    % size/2 to create starting point at origin
+    xA.Translation = [2.5 0.01 0.01];
+    yA.Translation = [0.01 2.5 0.01];
+    zA.Translation = [0.01 0.01 2.5];
+
+    xA.Color = [1 0 0]; % Red
+    yA.Color = [0 1 0]; % Green
+    zA.Color = [0 0 1]; % Blue
+
+    add(world,xA);
+    add(world,yA);
+    add(world,zA);
+end
