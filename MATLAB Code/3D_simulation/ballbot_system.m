@@ -24,7 +24,7 @@ classdef ballbot_system
         ICxz
         ICyz
         simIn
-        model
+        model_path
         workspace % model workspace
     end
 
@@ -36,38 +36,37 @@ classdef ballbot_system
             [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, ~] = make_ballbot();
 
             % loads defaults (for now, implement later) for other planes
-            [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = deal(zeros(4, 4));
+            %[obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = deal(zeros(4, 4));
+            [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = make_ballbot(); % xz plane dynamics same as yz
             [obj.Axy, obj.Bxy, obj.Cxy, obj.Dxy] = deal(zeros(4, 4));
 
             % get input torques
             obj.vtorque = [0; 0; 0]; % individual motor torques
-            obj.ptorque = [0; 0; 0]; % planar torques in X, Y, Z
+            obj.ptorque = reshape([0; 0; 0], [1, 3]); % planar torques in X, Y, Z
 
             % load initial conditions in minimal coordinates
             obj.ICxy = icxy;
             obj.ICxz = icxz;
             obj.ICyz = icyz;
 
+            % empty stuff
+            obj.simIn = []; 
+            obj.model_path = [];
+            obj.workspace = [];
         end
 
-        function [obj, simIn] = create_sim(model)
-            % makes the overall structure more general, instead of
-            % requiring people to output a model and simulation
-
-
-            % make sim input from model path
-            obj.model = model;
-            obj.simIn = Simulink.SimulationInput(model);
+        function [obj, simIn] = create_sim(obj, model_path)
+            % create sim object without loading workspace
+            obj.simIn = Simulink.SimulationInput(model_path);
             simIn = obj.simIn;
-
-            % Get model workspace
-            load_system(model);  % ensure loaded
-            obj.workspace = get_param(model, 'ModelWorkspace');
         end
 
-        function obj = load_to_sim(obj)
+        function obj = load_to_sim(obj, model_path)
             % Push everything into the model workspace
 
+            % Get model workspace (required here, can't pass obj.workspace)
+            load_system(model_path);  % ensure loaded
+            obj.workspace = get_param(model_path, 'ModelWorkspace');
             mw = obj.workspace;
 
             % XZ Plane
