@@ -29,13 +29,8 @@ classdef ballbot_system
     end
 
     methods
-        function [obj, simIn] = ballbot_system(model, icxy, icxz, icyz)
+        function obj = ballbot_system(icxy, icxz, icyz)
             %ballbot_system: Constructs an instance of this class
-
-            % make sim input from model path
-            obj.model = model;
-            obj.simIn = Simulink.SimulationInput(model);
-            simIn = obj.simIn;
 
             %   calculates matrices for YZ plane
             [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, ~] = make_ballbot();
@@ -53,10 +48,21 @@ classdef ballbot_system
             obj.ICxz = icxz;
             obj.ICyz = icyz;
 
+        end
+
+        function [obj, simIn] = create_sim(model)
+            % makes the overall structure more general, instead of
+            % requiring people to output a model and simulation
+
+
+            % make sim input from model path
+            obj.model = model;
+            obj.simIn = Simulink.SimulationInput(model);
+            simIn = obj.simIn;
+
             % Get model workspace
             load_system(model);  % ensure loaded
             obj.workspace = get_param(model, 'ModelWorkspace');
-
         end
 
         function obj = load_to_sim(obj)
