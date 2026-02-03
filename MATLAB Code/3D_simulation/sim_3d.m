@@ -7,25 +7,16 @@ clear; clc; close all;
 
 % Run linear model------------------------------------------------------
 
-% Construct & load params
-[A_yz, B_yz, C_yz, D_yz, ~] = make_ballbot();
-ics_yz = [0; -0.3; 0; 0]; % initial conditions in minimal coords
 
 
-% Input parameters into simulink model
+% Input parameters and configurations into simulink model
 mdl = "main_sim";
-simIn = Simulink.SimulationInput(mdl);
+simIn = load_simparams(mdl);
 
 set_param(mdl, "EnablePacing", "on"); % slow down pacing to file: 0.8x
 simIn = setModelParameter(simIn, "StopTime", "3"); % configure run time (s)
 
-simIn = simIn.setVariable("A", A_yz);
-simIn = simIn.setVariable("B", B_yz);
-simIn = simIn.setVariable("C", C_yz);
-simIn = simIn.setVariable("D", D_yz);
-simIn = simIn.setVariable("ics_yz", ics_yz);
-
-% Run sim & vis
+%% Run sim & vis
 out = sim(simIn);
 
 % Get data
@@ -40,4 +31,3 @@ theta_x = theta_x * 180/pi; % deg
 plot(t, theta_x)
 xlabel('Time (s)');
 ylabel('\theta_x, (deg)');
-
