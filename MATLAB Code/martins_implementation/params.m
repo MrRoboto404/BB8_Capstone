@@ -16,7 +16,7 @@ p.r_A = .1;     %m, radius of the body (Cylinder)
 p.l = .339;     %m, Height of the center of gravity
 
 % Inertias
-p.Theta_k = .0239; %kgm^2 Inertia of the ball
+p.Theta_k = .0239;        %kgm^2 Inertia of the ball
 p.Theta_w    = 0.00236;   % kg*m^2, Inertia of actuating wheel in yz-/xz-plane
 p.Theta_w_xy = 0.00945;   % kg*m^2, Inertia of actuating wheel in xy-plane
 
@@ -29,5 +29,8 @@ p.g = 9.81;               % m/s^2, Gravitational acceleration
 % Gear train
 p.i_Gear = 26;            % -, Gear ratio
 
+%Motor inclination angles
+p.alpha = deg2rad(45);
+p.beta = deg2rad(0);
 
 end
