@@ -23,18 +23,26 @@ classdef ballbot_system
         ICxy
         ICxz
         ICyz
+        simIn
+        model
+        workspace % model workspace
     end
 
     methods
-        function obj = ballbot_system(icxy, icxz, icyz)
+        function [obj, simIn] = ballbot_system(model, icxy, icxz, icyz)
             %ballbot_system: Constructs an instance of this class
+
+            % make sim input from model path
+            obj.model = model;
+            obj.simIn = Simulink.SimulationInput(model);
+            simIn = obj.simIn;
 
             %   calculates matrices for YZ plane
             [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, ~] = make_ballbot();
 
             % loads defaults (for now, implement later) for other planes
-            [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = deal(0);
-            [obj.Axy, obj.Bxy, obj.Cxy, obj.Dxy] = deal(0);
+            [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = deal(zeros(4, 4));
+            [obj.Axy, obj.Bxy, obj.Cxy, obj.Dxy] = deal(zeros(4, 4));
 
             % get input torques
             obj.vtorque = [0; 0; 0]; % individual motor torques
@@ -44,33 +52,44 @@ classdef ballbot_system
             obj.ICxy = icxy;
             obj.ICxz = icxz;
             obj.ICyz = icyz;
+
+            % Get model workspace
+            load_system(model);  % ensure loaded
+            obj.workspace = get_param(model, 'ModelWorkspace');
+
         end
 
-        function simIn = load_to_sim(model)
-            %load_to_sim: automatically loads the various parameters into
-            %the given model path to store matrices, inputs, etc
-            simIn = Simulink.SimulationInput(model);
+        function obj = load_to_sim(obj)
+            % Push everything into the model workspace
+
+            mw = obj.workspace;
 
             % XZ Plane
-            simIn = simIn.setVariable("Axz", obj.Axz);
-            simIn = simIn.setVariable("Bxz", obj.Bxz);
-            simIn = simIn.setVariable("Cxz", obj.Cxz);
-            simIn = simIn.setVariable("Dxz", obj.Dxz);
-            simIn = simIn.setVariable("ICxz", obj.ICxz);
-                       
+            mw.assignin("Axz", obj.Axz);
+            mw.assignin("Bxz", obj.Bxz);
+            mw.assignin("Cxz", obj.Cxz);
+            mw.assignin("Dxz", obj.Dxz);
+            mw.assignin("ICxz", obj.ICxz);
+
             % XY Plane
-            simIn = simIn.setVariable("Axy", obj.Axy);
-            simIn = simIn.setVariable("Bxy", obj.Bxy);
-            simIn = simIn.setVariable("Cxy", obj.Cxy);
-            simIn = simIn.setVariable("Dxy", obj.Dxy);
-            simIn = simIn.setVariable("ICxy", obj.ICxy);
-            
+            mw.assignin("Axy", obj.Axy);
+            mw.assignin("Bxy", obj.Bxy);
+            mw.assignin("Cxy", obj.Cxy);
+            mw.assignin("Dxy", obj.Dxy);
+            mw.assignin("ICxy", obj.ICxy);
+
             % YZ Plane
-            simIn = simIn.setVariable("Ayz", obj.Ayz);
-            simIn = simIn.setVariable("Byz", obj.Byz);
-            simIn = simIn.setVariable("Cyz", obj.Cyz);
-            simIn = simIn.setVariable("Dyz", obj.Dyz);
-            simIn = simIn.setVariable("ICyz", obj.ICyz);
+            mw.assignin("Ayz", obj.Ayz);
+            mw.assignin("Byz", obj.Byz);
+            mw.assignin("Cyz", obj.Cyz);
+            mw.assignin("Dyz", obj.Dyz);
+            mw.assignin("ICyz", obj.ICyz);
+
+            % Torques
+            mw.assignin("vtorque", obj.vtorque);
+            mw.assignin("ptorque", obj.ptorque);
+
+            disp("Loaded all parameters into MODEL WORKSPACE");
 
         end
 

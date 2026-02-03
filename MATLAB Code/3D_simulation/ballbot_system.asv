@@ -23,11 +23,18 @@ classdef ballbot_system
         ICxy
         ICxz
         ICyz
+        simIn
+        model
     end
 
     methods
-        function obj = ballbot_system()
+        function [obj, simIn] = ballbot_system(model, icxy, icxz, icyz)
             %ballbot_system: Constructs an instance of this class
+
+            % make sim input from model path
+            obj.model = model;
+            obj.simIn = Simulink.SimulationInput(model);
+            simIn = obj.simIn;
 
             %   calculates matrices for YZ plane
             [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, ~] = make_ballbot();
@@ -41,35 +48,36 @@ classdef ballbot_system
             obj.ptorque = [0; 0; 0]; % planar torques in X, Y, Z
 
             % load initial conditions in minimal coordinates
-            obj.ICxy = [0; 0; 0; 0];
-            obj.ICxz = [0; 0; 0; 0]
+            obj.ICxy = icxy;
+            obj.ICxz = icxz;
+            obj.ICyz = icyz;
         end
 
-        function simIn = load_to_sim(model)
+        function [obj, Axz, Bxz, Cxz, Dxz, Axy, Bxy, Cxy, Dxy,
             %load_to_sim: automatically loads the various parameters into
-            %the given model path to store matrices, inputs, etc
-            simIn = Simulink.SimulationInput(model);
 
             % XZ Plane
-            simIn = simIn.setVariable("Axz", A_xz);
-            simIn = simIn.setVariable("Bxz", B_xz);
-            simIn = simIn.setVariable("Cxz", C_xz);
-            simIn = simIn.setVariable("Dxz", D_xz);
-            simIn = simIn.setVariable("ics_xz", ics_xz);
-            
-            % YZ Plane
-            simIn = simIn.setVariable("A_yz", A_yz);
-            simIn = simIn.setVariable("B_yz", B_yz);
-            simIn = simIn.setVariable("C_yz", C_yz);
-            simIn = simIn.setVariable("D_yz", D_yz);
-            simIn = simIn.setVariable("ics_yz", ics_yz);
-            
+            obj.simIn = obj.simIn.setVariable("Axz", obj.Axz);
+            obj.simIn = obj.simIn.setVariable("Bxz", obj.Bxz);
+            obj.simIn = obj.simIn.setVariable("Cxz", obj.Cxz);
+            obj.simIn = obj.simIn.setVariable("Dxz", obj.Dxz);
+            obj.simIn = obj.simIn.setVariable("ICxz", obj.ICxz);
+                       
             % XY Plane
-            simIn = simIn.setVariable("A_xy", A_xy);
-            simIn = simIn.setVariable("B_xy", B_xy);
-            simIn = simIn.setVariable("C_xy", C_xy);
-            simIn = simIn.setVariable("D_xy", D_xy);
-            simIn = simIn.setVariable("ics_xy", ics_xy);
+            obj.simIn = obj.simIn.setVariable("Axy", obj.Axy);
+            obj.simIn = obj.simIn.setVariable("Bxy", obj.Bxy);
+            obj.simIn = obj.simIn.setVariable("Cxy", obj.Cxy);
+            obj.simIn = obj.simIn.setVariable("Dxy", obj.Dxy);
+            obj.simIn = obj.simIn.setVariable("ICxy", obj.ICxy);
+
+            % YZ Plane
+            obj.simIn = obj.simIn.setVariable("Ayz", obj.Ayz);
+            obj.simIn = obj.simIn.setVariable("Byz", obj.Byz);
+            obj.simIn = obj.simIn.setVariable("Cyz", obj.Cyz);
+            obj.simIn = obj.simIn.setVariable("Dyz", obj.Dyz);
+            obj.simIn = obj.simIn.setVariable("ICyz", obj.ICyz);
+
+            disp('Done')
 
         end
 

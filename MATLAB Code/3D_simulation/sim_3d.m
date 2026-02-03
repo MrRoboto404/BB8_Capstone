@@ -11,13 +11,18 @@ clear; clc; close all;
 
 % Input parameters and configurations into simulink model
 mdl = "main_sim";
-simIn = load_simparams(mdl);
+icxy = [0; 0; 0; 0];
+icxz = [0; 0; 0; 0];
+icyz = [0; -0.3; 0; -0.7];
+[bb8, simIn] = ballbot_system(mdl, icxy, icxz, icyz);
 
 set_param(mdl, "EnablePacing", "on"); % slow down pacing to file: 0.8x
 simIn = setModelParameter(simIn, "StopTime", "3"); % configure run time (s)
+bb8 = bb8.load_to_sim(); % load params to simulink model
 
 %% Run sim & vis
-out = sim(simIn);
+disp("Loading simulation...")
+out = sim(bb8.simIn);
 
 % Get data
 t = out.tout;
