@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SimscapeMultibodyImportXML xmlns="urn:mathworks:SimscapeMultibody:import"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            version="2.0">
+   <Created by="Ryan Stokes" from="Onshape" on="02/04/26||14:36:52"
+            using="Simscape Multibody Exporter"/>
+   <ModelUnits length="millimeter" mass="kilogram"/>
+   <DataUnits length="meter" mass="kilogram"/>
+   <RootAssembly name="Robot_On_Balls" uid="b58d550e60d09c73df603032"
+                 version="w-eefaab7f081d89d76aecf5ea">
+      <InstanceTree>
+         <Instance entityUid="JHD*:*32acc80b074eee738f9c40e5" name="Floor &lt;1&gt;"
+                   uid="MFS9MR5OupmSM6/bj">
+            <Transform>
+               <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+               <Translation>0.000000000 0.000000000 -0.003000000 </Translation>
+            </Transform>
+         </Instance>
+         <Instance entityUid="c6ce215e9e6984f938c8be56" name="Robot_Assembly &lt;1&gt;"
+                   uid="MLTJjo0LnS2PzdVII">
+            <Transform>
+               <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+               <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+            </Transform>
+            <Instance entityUid="JHD*:*0feaec005df7f588a9a5f6b4" name="Wheel &lt;2&gt;"
+                      uid="M/yqMTf6S5udCnV2x">
+               <Transform>
+                  <Rotation>-0.426066301 -0.505932297 0.750000012 0.894480567 -0.111375570 0.433012699 -0.135543431 0.855352555 0.499999985 </Rotation>
+                  <Translation>-0.060596726 -0.045279554 0.240231043 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*0feaec005df7f588a9a5f6b4" name="Wheel &lt;3&gt;"
+                      uid="M133gHWXVXJL5FbhI">
+               <Transform>
+                  <Rotation>0.260894615 0.607810840 -0.749999988 -0.500976983 0.749347773 0.433012677 0.825200620 0.262762056 0.500000039 </Rotation>
+                  <Translation>0.061864799 -0.045279552 0.240231038 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="Motor &lt;2&gt;"
+                      uid="M75ao5lEVQ+7N0r72">
+               <Transform>
+                  <Rotation>0.749999988 0.499999987 0.433012737 -0.433012677 0.866025411 -0.250000018 -0.500000039 0.000000006 0.866025381 </Rotation>
+                  <Translation>0.058114799 -0.043114489 0.242731038 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*0feaec005df7f588a9a5f6b4" name="Wheel &lt;1&gt;"
+                      uid="M7IkMsIbvpmypGENJ">
+               <Transform>
+                  <Rotation>-0.841185480 0.540746695 0.000000031 -0.270373356 -0.420592705 -0.866025418 -0.468300369 -0.728488015 0.499999976 </Rotation>
+                  <Translation>0.000634035 0.060775238 0.240231043 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="Motor &lt;1&gt;"
+                      uid="MNs6HgEVgjli/iZNc">
+               <Transform>
+                  <Rotation>-0.750000012 -0.500000013 0.433012667 -0.433012699 0.866025397 0.250000031 -0.499999985 0.000000042 -0.866025412 </Rotation>
+                  <Translation>-0.056846725 -0.043114491 0.242731043 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="Motor &lt;3&gt;"
+                      uid="MUxHMcUHRYzmkH0EV">
+               <Transform>
+                  <Rotation>-0.000000031 1.000000000 -0.000000024 0.866025418 0.000000015 -0.499999976 -0.499999976 -0.000000036 -0.866025418 </Rotation>
+                  <Translation>0.000634035 0.056445111 0.242731043 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JHD*:*df7d346d2125128244530096" grounded="true" name="Body &lt;1&gt;"
+                      uid="MtE+fSiqlZ5dt7NEn">
+               <Transform>
+                  <Rotation>1.000000000 -0.000000015 0.000000036 0.000000015 1.000000000 -0.000000028 -0.000000036 0.000000028 1.000000000 </Rotation>
+                  <Translation>0.000634037 -0.009927957 0.268731042 </Translation>
+               </Transform>
+            </Instance>
+         </Instance>
+         <Instance entityUid="JHD*:*19dabb1899abd7b07389960b" name="FakeBall &lt;1&gt;"
+                   uid="MTB9Y2afrrINXP3Jt">
+            <Transform>
+               <Rotation>1.000000000 -0.000000018 0.000000000 0.000000018 1.000000000 0.000000014 -0.000000000 -0.000000014 1.000000000 </Rotation>
+               <Translation>0.000634032 -0.009927953 0.114792114 </Translation>
+            </Transform>
+         </Instance>
+      </InstanceTree>
+      <Constraints/>
+      <Joints>
+         <Weld name="Fastened1">
+            <BaseFrame>
+               <InstancePath/>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.150000000 0.150000000 0.000000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath>
+                  <Uid>MFS9MR5OupmSM6/bj</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.150000000 0.150000000 0.003000000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Weld>
+      </Joints>
+   </RootAssembly>
+   <Assemblies>
+      <Assembly name="Robot_Assembly" uid="c6ce215e9e6984f938c8be56">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <Constraints/>
+         <Joints>
+            <Cylindrical name="Front_Right_Motor_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>MtE+fSiqlZ5dt7NEn</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>0.866025404 -0.000000000 -0.500000000 -0.500000000 0.000000000 -0.866025404 0.000000000 1.000000000 -0.000000000 </Rotation>
+                     <Translation>0.015980762 -0.032320508 -0.005000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>M75ao5lEVQ+7N0r72</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 -0.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>-0.042000000 -0.025000000 0.000000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+            <Cylindrical name="Front_Right_Wheel_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>M75ao5lEVQ+7N0r72</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>-0.000000000 -0.000000000 1.000000000 -0.000000000 -1.000000000 -0.000000000 1.000000000 -0.000000000 -0.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>M133gHWXVXJL5FbhI</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 -0.005000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+            <Cylindrical name="Front_Left_Motor_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>MtE+fSiqlZ5dt7NEn</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>0.866025404 -0.000000000 0.500000000 0.500000000 0.000000000 -0.866025404 0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>-0.035980762 0.002320508 -0.005000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>MNs6HgEVgjli/iZNc</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 -0.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>-0.042000000 -0.025000000 0.000000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+            <Cylindrical name="Front_Left_Wheel_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>MNs6HgEVgjli/iZNc</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>-0.000000000 0.000000000 1.000000000 -1.000000000 0.000000000 0.000000000 -0.000000000 -1.000000000 0.000000000 </Rotation>
+                     <Translation>0.010000000 0.000000000 0.000000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>M/yqMTf6S5udCnV2x</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 -0.005000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+            <Cylindrical name="Back_Motor_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>MtE+fSiqlZ5dt7NEn</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>-0.000000000 0.000000000 -1.000000000 -0.000000000 1.000000000 0.000000000 1.000000000 0.000000000 0.000000000 </Rotation>
+                     <Translation>0.020000000 0.030000000 -0.005000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>MUxHMcUHRYzmkH0EV</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 -0.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>-0.042000000 -0.025000000 0.000000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+            <Cylindrical name="Back_Wheel_Cyl">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>M7IkMsIbvpmypGENJ</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>MUxHMcUHRYzmkH0EV</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>0.000000000 0.000000000 -1.000000000 1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 </Rotation>
+                     <Translation>-0.010000000 0.000000000 0.000000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Cylindrical>
+         </Joints>
+      </Assembly>
+   </Assemblies>
+   <Parts>
+      <Part name="Wheel" uid="JHD*:*0feaec005df7f588a9a5f6b4">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.0292598484</Mass>
+            <CenterOfMass>0.000000000 0.000157852 0.000027347 </CenterOfMass>
+            <Inertia>0.000008197 0.000008295 0.000016006 0.000000016 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Wheel.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Diffuse a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Specular a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="FakeBall" uid="JHD*:*19dabb1899abd7b07389960b">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>5.82908917</Mass>
+            <CenterOfMass>0.000000000 0.000000000 -0.000000000 </CenterOfMass>
+            <Inertia>0.028096950 0.028096950 0.028097129 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="FakeBall.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Diffuse a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Specular a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="Floor" uid="JHD*:*32acc80b074eee738f9c40e5">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.28404</Mass>
+            <CenterOfMass>0.000000000 -0.000000000 0.001500000 </CenterOfMass>
+            <Inertia>0.002130513 0.002130513 0.004260600 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Floor.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Diffuse a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Specular a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="Body" uid="JHD*:*df7d346d2125128244530096">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.641538062</Mass>
+            <CenterOfMass>-0.000015895 0.000789065 0.037918286 </CenterOfMass>
+            <Inertia>0.000854656 0.000872090 0.000794005 -0.000000040 -0.000000017 -0.000000491 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Body.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.003921569" g="0.713725490" r="0.980392157"/>
+            <Diffuse a="1.000000000" b="0.003921569" g="0.713725490" r="0.980392157"/>
+            <Specular a="1.000000000" b="0.003921569" g="0.713725490" r="0.980392157"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="Motor" uid="JHD*:*edd56b0e311e460d178ecae4">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.0579321498</Mass>
+            <CenterOfMass>-0.026748222 0.000000000 0.000000000 </CenterOfMass>
+            <Inertia>0.000011276 0.000016371 0.000019732 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Motor.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.674509804" g="0.121568627" r="0.596078431"/>
+            <Diffuse a="1.000000000" b="0.674509804" g="0.121568627" r="0.596078431"/>
+            <Specular a="1.000000000" b="0.674509804" g="0.121568627" r="0.596078431"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+   </Parts>
+</SimscapeMultibodyImportXML>
