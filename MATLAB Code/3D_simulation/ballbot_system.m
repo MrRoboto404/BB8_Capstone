@@ -18,8 +18,8 @@ classdef ballbot_system
         Dxy
         Dxz
         Dyz
-        vtorque
-        ptorque
+        virt_torque
+        motor_torque
         ICxy
         ICxz
         ICyz
@@ -29,7 +29,7 @@ classdef ballbot_system
     end
 
     methods
-        function obj = ballbot_system(icxy, icxz, icyz)
+        function obj = ballbot_system()
             %ballbot_system: Constructs an instance of this class
 
             %   calculates matrices for YZ plane
@@ -40,25 +40,34 @@ classdef ballbot_system
             [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = make_ballbot(); % xz plane dynamics same as yz
             [obj.Axy, obj.Bxy, obj.Cxy, obj.Dxy] = deal(zeros(4, 4));
 
-            % get input torques
-            obj.vtorque = [0; 0; 0]; % individual motor torques
-            obj.ptorque = reshape([0; 0; 0], [1, 3]); % planar torques in X, Y, Z
-
-            % load initial conditions in minimal coordinates
-            obj.ICxy = icxy;
-            obj.ICxz = icxz;
-            obj.ICyz = icyz;
 
             % empty stuff
             obj.simIn = []; 
             obj.model_path = [];
             obj.workspace = [];
+
+            obj.ICxy = [];
+            obj.ICxz = [];
+            obj.ICyz = [];
+            obj.virt_torque = []; % individual motor torques
+            obj.motor_torque = []; % planar torques in X, Y, Z
+
         end
 
         function [obj, simIn] = create_sim(obj, model_path)
             % create sim object without loading workspace
             obj.simIn = Simulink.SimulationInput(model_path);
             simIn = obj.simIn;
+        end
+
+        function obj = initial_conditions(obj, icxy, icxz, icyz, motortorque)
+            % load initial conditions clealy in one go
+
+            obj.ICxy = icxy;
+            obj.ICxz = icxz;
+            obj.ICyz = icyz;
+            obj.virt_torque = []; % individual motor torques
+            obj.motor_torque = motortorque; % planar torques in X, Y, Z           
         end
 
         function obj = load_to_sim(obj, model_path)
@@ -74,7 +83,10 @@ classdef ballbot_system
             mw.assignin("Bxz", obj.Bxz);
             mw.assignin("Cxz", obj.Cxz);
             mw.assignin("Dxz", obj.Dxz);
-            mw.assignin("ICxz", obj.ICxz);
+            mw.assignin("ic_phi_y", obj.ICxz(1));
+            mw.assignin("ic_theta_y", obj.ICxz(2));
+            mw.assignin("ic_phidot_y", obj.ICxz(3));
+            mw.assignin("ic_thetadot_y", obj.ICxz(4));
 
             % XY Plane
             mw.assignin("Axy", obj.Axy);
@@ -82,6 +94,10 @@ classdef ballbot_system
             mw.assignin("Cxy", obj.Cxy);
             mw.assignin("Dxy", obj.Dxy);
             mw.assignin("ICxy", obj.ICxy);
+            mw.assignin("ic_phi_z", obj.ICxy(1));
+            mw.assignin("ic_theta_z", obj.ICxy(2));
+            mw.assignin("ic_phidot_z", obj.ICxy(3));
+            mw.assignin("ic_thetadot_z", obj.ICxy(4));
 
             % YZ Plane
             mw.assignin("Ayz", obj.Ayz);
@@ -89,10 +105,16 @@ classdef ballbot_system
             mw.assignin("Cyz", obj.Cyz);
             mw.assignin("Dyz", obj.Dyz);
             mw.assignin("ICyz", obj.ICyz);
+            mw.assignin("ic_phi_x", obj.ICyz(1));
+            mw.assignin("ic_theta_x", obj.ICyz(2));
+            mw.assignin("ic_phidot_x", obj.ICyz(3));
+            mw.assignin("ic_thetadot_x", obj.ICyz(4));
 
             % Torques
-            mw.assignin("vtorque", obj.vtorque);
-            mw.assignin("ptorque", obj.ptorque);
+            mw.assignin("virt_torque", obj.virt_torque);
+            mw.assignin("legFL_torque", obj.motor_torque(1));
+            mw.assignin("legFR_torque", obj.motor_torque(2));
+            mw.assignin("legB_torque", obj.motor_torque(3));
 
             disp("Loaded all parameters into MODEL WORKSPACE");
 
