@@ -4,9 +4,9 @@ clear; clc; close all;
 
 % Input parameters and configurations into simulink model
 mdl = "multibody_test";
-icxy = [0; pi/2; 0; 0]; % rad and rad/s
-icxz = [0; 0.3; 0; -0.7];
-icyz = [0; 0.3; 0; 0];
+icxy = [0; 0; 0; 0]; % rad and rad/s
+icxz = [0; 0; 0; -0.7];
+icyz = [0; 0; 0; 0];
 motor_torque = [-5, 5, 0]; % FL FR B legs
 
 % create ballbot sim model
