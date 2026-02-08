@@ -5,8 +5,6 @@ clearvars; clc;
 
 % Parameters
 bb = params;
-% bb.l = .145;
-bb.Theta_k
 [A,B,C,D] = get_linearized_matrices(bb);
  %m
 % LQR Controller
@@ -47,7 +45,7 @@ uvirt = squeeze(u)./bb.i_Gear; % virt wheel torque
 
 [T1, T2, T3] = real_motor_torques_from_virtual(uvirt,0,0,bb);
 % 
-figure
+figure('Name', 'Original', 'NumberTitle', 'off')
 subplot(4,1,1)
 plot(t,squeeze(theta))
 legend('theta')
