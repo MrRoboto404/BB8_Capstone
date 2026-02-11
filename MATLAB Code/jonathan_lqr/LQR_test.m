@@ -1,12 +1,12 @@
 clearvars; clc;
-% close all;
+close all;
 
 % %% This script is the first attempt to implement LQR control %%
 
 % Parameters
 bb = params;
 [A,B,C,D] = get_linearized_matrices(bb);
- %m
+test = ['Test I (Note: \beta = 0)'];
 % LQR Controller
 Q = [1  0   0   0;              % State weighting matrix
      0  1   0   0;
@@ -37,16 +37,15 @@ dotphi = squeeze(simout.logsout.get('dotphi').Values.Data);
 dottheta = squeeze(simout.logsout.get('dottheta').Values.Data);
 dotpsi_virt = squeeze(simout.logsout.get('dotpsi').Values.Data);
 
-% Motor speeds
-rpm = 30/pi;
-psidot_omni_1 = dotpsi_virt * cos(bb.alpha) * rpm;
-psidot_omni_2 = -0.5 * dotpsi_virt * cos(bb.alpha) * rpm;
-psidot_omni_3 = psidot_omni_2;
+% Motor speed
+rads_to_rpm = 30/pi;
+psidot_omni_1 = dotpsi_virt * cos(bb.alpha) * rads_to_rpm * bb.i_Gear;
+psidot_omni_2 = -0.5 * dotpsi_virt * cos(bb.alpha) * rads_to_rpm * bb.i_Gear;
+psidot_omni_3 = -0.5 * dotpsi_virt * cos(bb.alpha)* rads_to_rpm * bb.i_Gear;
 
 t = simout.get('tout');
 u = simout.logsout.get("u").Values.Data;
 uvirt = squeeze(u)./bb.i_Gear; % virt wheel torque
-
 
 [T1, T2, T3] = real_motor_torques_from_virtual(uvirt,0,0,bb);
 % 
@@ -56,6 +55,7 @@ subplot(5,1,1)
 plot(t,squeeze(theta))
 legend('theta')
 ylabel('Angle (rad)')
+title(test)
 grid
 
 subplot(5,1,2)

@@ -11,18 +11,18 @@ p.m_omni = 4; %kg, reverse engineered from inertia given
 %_______Lengths_______
 p.r_k = .125;   %m, Radius of the ball
 p.r_w = .06;    %m, radius of the OMNIWHEELS, NOT VIRTUAL
-p.r_A = .1;     %m, radius of the body (cylinder)
+p.r_A = 0.1;     %m, radius of the body (cylinder)
 
 p.h_A = 0.894;  %m, height of the body (cylinder). Reverse engineered from interia calcs
-p.l = .339;     %m, Height of the center of gravity of body from center of ball
+p.l = 0.339;     %m, Height of the center of gravity of body from center of ball
 
 %_______Angle of wheels on ball_______
 p.alpha = deg2rad(45); %rad
-p.beta = deg2rad(30); %rad, taken from +X axis (adds intervals for other locations)
+p.beta = deg2rad(0); %rad, taken from +X axis (adds intervals for other locations)
 
 %_______Misc_______
 p.g = 9.81;     % m/s^2, Gravitational acceleration
-p.i_Gear = 26;  % -, Gear ratio
+p.i_Gear = 260;  % -, Gear ratio
 
 %_______Inertia Constants_______
 p.Theta_m = 3.33 * 10^-6; % rotor intertia (real small)
