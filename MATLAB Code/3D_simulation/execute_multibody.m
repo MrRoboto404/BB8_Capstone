@@ -10,7 +10,7 @@ icyz = [0; 0.3; 0; 0];
 motor_torque = [0, 0, 0]; % FL FR B legs
 
 % create ballbot sim model
-bb8 = ballbot_system(); % make object
+bb8 = ballbot_system(); % make object, complete with matrices and parameters
 bb8 = bb8.initial_conditions(icxy, icxz, icyz, motor_torque); % load ICs
 [bb8, simIn] = bb8.create_sim(mdl); % sim model
 bb8 = bb8.load_to_sim(mdl); % load params to simulink model

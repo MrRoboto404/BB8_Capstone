@@ -119,6 +119,7 @@ classdef ballbot_system
             mw.assignin("legB_torque", obj.motor_torque(3));
 
             % System parameters
+            mw.assignin("r_ball", obj.params.r_ball);
 
             disp("Successfully loaded all parameters into model workspace.");
 
