@@ -6,7 +6,7 @@ clear; clc; close all;
 mdl = "multibody_test";
 icxy = [0; 0; 0; 0]; % rad and rad/s
 icxz = [0; 0; 0; 0];
-icyz = [0; 0; 0; 0];
+icyz = [0; 0.3; 0; 0];
 motor_torque = [0, 0, 0]; % FL FR B legs
 
 % create ballbot sim model

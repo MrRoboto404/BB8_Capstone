@@ -26,6 +26,7 @@ classdef ballbot_system
         simIn
         model_path
         workspace % model workspace
+        params % from params.m (e.g. bb8.params.m_A)
     end
 
     methods
@@ -33,7 +34,7 @@ classdef ballbot_system
             %ballbot_system: Constructs an instance of this class
 
             %   calculates matrices for YZ plane
-            [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, ~] = make_ballbot();
+            [obj.Ayz, obj.Byz, obj.Cyz, obj.Dyz, obj.params] = make_ballbot();
 
             % loads defaults (for now, implement later) for other planes
             %[obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = deal(zeros(4, 4));
@@ -71,6 +72,7 @@ classdef ballbot_system
         end
 
         function obj = load_to_sim(obj, model_path)
+            disp("Beginning load...")
             % Push everything into the model workspace
 
             % Get model workspace (required here, can't pass obj.workspace)
@@ -116,7 +118,9 @@ classdef ballbot_system
             mw.assignin("legFR_torque", obj.motor_torque(2));
             mw.assignin("legB_torque", obj.motor_torque(3));
 
-            disp("Loaded all parameters into MODEL WORKSPACE");
+            % System parameters
+
+            disp("Successfully loaded all parameters into model workspace.");
 
         end
 
