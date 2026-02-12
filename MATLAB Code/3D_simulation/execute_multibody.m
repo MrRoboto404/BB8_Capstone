@@ -6,7 +6,7 @@ clear; clc; close all;
 mdl = "multibody_test";
 icxy = [0; 0; 0; 0]; % rad and rad/s
 icxz = [0; 0; 0; 0];
-icyz = [0; 0.3; 0; 0];
+icyz = [0; 0.3; 0; -0.7];
 motor_torque = [0, 0, 0]; % FL FR B legs
 
 % create ballbot sim model
@@ -21,15 +21,60 @@ outputs = sim(bb8.simIn);
 
 %% MANIPULATE DATA WITHOUT RERUNNING SIM
 clc; close all; 
-% Get data
+
+% Get data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 t = outputs.tout;
-theta_x = outputs.theta_x.Data * 180/pi; % rad to deg
-phi_x = outputs.phi_x.Data * 180/pi;
+
+%___Rotational, in rads___
+phi_x = (outputs.phi_x.Data);
+theta_x = (outputs.theta_x.Data);
+phidot_x = (outputs.phi_dot_x.Data);
+thetadot_x = (outputs.theta_dot_x.Data);
+
+%___Translational, in meters___
+body_y = outputs.body_posy.Data;
+body_z = outputs.body_posz.Data;
+ball_y = outputs.ball_posy.Data;
+ball_z = outputs.ball_posz.Data;
+
+
+
+% Graph data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure();
 
 hold on;
-plot(t, theta_x, 'b');
-plot(t, phi_x, 'r');
-legend('\theta_x','\phi_x')
-xlabel('Time (s)')
-ylabel('Rotation (deg)')
+subplot(1, 4, 1)
+plot(t, phi_x, 'r', t, theta_x, 'c');
+grid on;
+ylabel("Displacement (rad)");
+xlabel("Time (s)");
+legend("\phi_x", "\theta_x");
+title("Angular Positions")
+
+subplot(1, 4, 2)
+plot(t, phidot_x, 'r', t, thetadot_x, 'c');
+grid on;
+ylabel("Speed (rad/s)");
+xlabel("Time (s)");
+legend("$\dot{\phi}_x$", "$\dot{\theta}_x$", 'Interpreter', 'latex');
+title("Angular Velocities")
+
+subplot(1, 4, 3)
+plot(t, ball_y, 'y', t, body_y, 'g');
+grid on;
+ylabel("Distance (m)");
+xlabel("Time (s)");
+legend("Ball", "Body");
+title("Y Positions")
+
+subplot(1, 4, 4)
+plot(t, ball_z, 'y', t, body_z, 'g');
+grid on;
+ylabel("Distance (m)");
+xlabel("Time (s)");
+legend("Ball", "Body");
+title("Z Positions")
+
+
+sgtitle("Simulation Results of YZ-Plane Plots for ICs of: " + mat2str(icyz));
 hold off;

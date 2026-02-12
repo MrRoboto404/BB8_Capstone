@@ -120,6 +120,9 @@ classdef ballbot_system
 
             % System parameters
             mw.assignin("r_ball", obj.params.r_ball);
+            mw.assignin("m_omni", obj.params.m_omni);
+            mw.assignin("m_body", obj.params.m_body);
+            
 
             disp("Successfully loaded all parameters into model workspace.");
 
