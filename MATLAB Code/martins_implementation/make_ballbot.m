@@ -60,20 +60,20 @@ function [M, Cvec, Gvec, B] = ballbot_planar_MCG(q, qdot, p)
     theta_d = qdot(2);
     
     m_tot = p.m_ball + p.m_body + p.m_virt;
-    r_tot = p.r_k + p.r_virt;
-    gamma = p.l*p.m_body + (p.r_k + p.r_virt)*p.m_virt;
+    r_tot = p.r_ball + p.r_omni;
+    gamma = p.l*p.m_body + (p.r_ball + p.r_omni)*p.m_virt;
     
     % M matrix (Eq 2.22)
-    M11 = m_tot*p.r_k^2 + p.Theta_ball + (p.r_k/p.r_virt)^2 * p.Theta_virt;
-    M12 = -(p.r_k/p.r_virt^2)*r_tot*p.Theta_virt + gamma*p.r_k*cos(theta);
+    M11 = m_tot*p.r_ball^2 + p.Theta_ball + (p.r_ball/p.r_omni)^2 * p.Theta_virt_vertical;
+    M12 = -(p.r_ball/p.r_omni^2)*r_tot*p.Theta_virt_vertical + gamma*p.r_ball*cos(theta);
     M21 = M12;
-    M22 = (r_tot^2/p.r_virt^2)*p.Theta_virt + p.Theta_body + p.m_body*p.l^2 + p.m_virt*r_tot^2;
+    M22 = (r_tot^2/p.r_omni^2)*p.Theta_virt_vertical + p.Theta_body_vertical + p.m_body*p.l^2 + p.m_virt*r_tot^2;
     
     M = [M11 M12;
          M21 M22];
     
     % C vector (Eq 2.23)
-    Cvec = [ -p.r_k*gamma*sin(theta)*theta_d^2;
+    Cvec = [ -p.r_ball*gamma*sin(theta)*theta_d^2;
               0 ];
     
     % G vector (Eq 2.24)
@@ -82,7 +82,7 @@ function [M, Cvec, Gvec, B] = ballbot_planar_MCG(q, qdot, p)
     
     % Non-potential forces (Eq 2.17 + 2.18 combined):
     %This eventually gets multiplied by the input to make F_np
-    a = p.r_k / p.r_virt;
+    a = p.r_ball / p.r_omni;
     B = [ a;
          -a ];
 end
