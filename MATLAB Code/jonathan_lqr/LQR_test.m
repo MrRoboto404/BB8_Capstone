@@ -1,12 +1,12 @@
 clearvars; clc;
-% close all;
+close all;
 
 % %% This script is the first attempt to implement LQR control %%
 
 % Parameters
 bb = params;
 [A,B,C,D] = get_linearized_matrices(bb);
- %m
+test = ['Test I (Note: \beta = 0)'];
 % LQR Controller
 Q = [1  0   0   0;              % State weighting matrix
      0  1   0   0;
@@ -32,43 +32,56 @@ simout = sim(   'LQR_sim', ...
 % Extract the simulation results
 phi = squeeze(simout.logsout.get('phi').Values.Data);
 theta = squeeze(simout.logsout.get('theta').Values.Data);
-psi = squeeze(simout.logsout.get('psi').Values.Data);
+psi_virt = squeeze(simout.logsout.get('psi').Values.Data);
 dotphi = squeeze(simout.logsout.get('dotphi').Values.Data);
 dottheta = squeeze(simout.logsout.get('dottheta').Values.Data);
-dotpsi = squeeze(simout.logsout.get('dotpsi').Values.Data);
+dotpsi_virt = squeeze(simout.logsout.get('dotpsi').Values.Data);
 
+% Motor speed
+rads_to_rpm = 30/pi;
+psidot_omni_1 = dotpsi_virt * cos(bb.alpha) * rads_to_rpm * bb.i_Gear;
+psidot_omni_2 = -0.5 * dotpsi_virt * cos(bb.alpha) * rads_to_rpm * bb.i_Gear;
+psidot_omni_3 = -0.5 * dotpsi_virt * cos(bb.alpha)* rads_to_rpm * bb.i_Gear;
 
 t = simout.get('tout');
 u = simout.logsout.get("u").Values.Data;
 uvirt = squeeze(u)./bb.i_Gear; % virt wheel torque
 
-
 [T1, T2, T3] = real_motor_torques_from_virtual(uvirt,0,0,bb);
 % 
-figure('Name', 'Original', 'NumberTitle', 'off')
-subplot(4,1,1)
+%figure('Name', 'Original', 'NumberTitle', 'off')
+figure;
+subplot(5,1,1)
 plot(t,squeeze(theta))
 legend('theta')
 ylabel('Angle (rad)')
+title(test)
 grid
 
-subplot(4,1,2)
-plot(t,squeeze(phi),t,squeeze(theta),t,squeeze(psi))
-legend('phi','theta','psi')
+subplot(5,1,2)
+plot(t,squeeze(phi),t,squeeze(theta))
+legend('phi','theta')
 ylabel('Angle (rad)')
 grid
 
-subplot(4,1,3)
-plot(t,squeeze(dotphi),t,squeeze(dottheta),t,squeeze(dotpsi))
+subplot(5,1,3)
+plot(t,squeeze(dotphi),t,squeeze(dottheta))
 ylabel('Angle rate (rad/s)')
-legend('dotphi','dottheta','dotpsi')
+legend('dotphi','dottheta')
 grid
 
-subplot(4,1,4)
+subplot(5,1,4)
 plot(t,T1,t,T2,'g',t,T3,'r--')
 legend('T1','T2','T3')
 xlabel('Time (s)')
 ylabel('Motor Torque (Nm)')
+grid
+
+subplot(5,1,5)
+plot(t,psidot_omni_1,t,psidot_omni_2,'g',t,psidot_omni_3,'r--')
+legend('Omni 1','Omni 2','Omni 3')
+xlabel('Time (s)')
+ylabel('Motor Speed (rpm)')
 grid
 %%
 % theta_max(abs(min(theta)))
