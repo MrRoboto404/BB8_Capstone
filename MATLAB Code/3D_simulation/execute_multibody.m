@@ -17,14 +17,14 @@ bb8 = bb8.load_to_sim(mdl); % load params to simulink model
 
 %% Run sim & vis
 disp("Loading simulation...")
-out = sim(bb8.simIn);
+outputs = sim(bb8.simIn);
 
 %% MANIPULATE DATA WITHOUT RERUNNING SIM
 clc; close all; 
 % Get data
-t = out.tout;
-theta_x = out.theta_x.Data * 180/pi; % rad to deg
-phi_x = out.phi_x.Data * 180/pi;
+t = outputs.tout;
+theta_x = outputs.theta_x.Data * 180/pi; % rad to deg
+phi_x = outputs.phi_x.Data * 180/pi;
 
 hold on;
 plot(t, theta_x, 'b');
