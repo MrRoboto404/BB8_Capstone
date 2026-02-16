@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SimscapeMultibodyImportXML xmlns="urn:mathworks:SimscapeMultibody:import"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            version="2.0">
+   <Created by="Ryan Stokes" from="Onshape" on="02/15/26||21:43:10"
+            using="Simscape Multibody Exporter"/>
+   <ModelUnits length="millimeter" mass="kilogram"/>
+   <DataUnits length="meter" mass="kilogram"/>
+   <RootAssembly name="Robot_Assembly_2" uid="7a1b92a17567dd5268886254"
+                 version="w-eefaab7f081d89d76aecf5ea">
+      <InstanceTree>
+         <Instance entityUid="JHD*:*a90084dd80f5387f56427dff" name="Body &lt;1&gt;"
+                   uid="M63qit4lWCDRgHu6T">
+            <Transform>
+               <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+               <Translation>0.000000000 -0.000000000 -0.040000000 </Translation>
+            </Transform>
+         </Instance>
+         <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="motor &lt;2&gt;"
+                   uid="M75ao5lEVQ+7N0r72">
+            <Transform>
+               <Rotation>0.750000000 0.500000000 0.433012702 -0.433012702 0.866025404 -0.250000000 -0.500000000 0.000000000 0.866025404 </Rotation>
+               <Translation>0.061230762 -0.035351597 -0.068500000 </Translation>
+            </Transform>
+         </Instance>
+         <Instance entityUid="68bfa1e331bf84a16c6d9635" name="Omni-Wheel Assembly &lt;3&gt;"
+                   uid="MGRCPFjCcvYpZl8DC">
+            <Transform>
+               <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -0.866025404 -0.500000000 0.000000000 0.500000000 -0.866025404 </Rotation>
+               <Translation>-0.015886706 0.072151357 -0.050991709 </Translation>
+            </Transform>
+            <Instance entityUid="JHD*:*f08dcbaab676ea1883a1ba96" name="Wheel &lt;1&gt;"
+                      uid="M7iIKqOhColVykTf2">
+               <Transform>
+                  <Rotation>-1.000000000 0.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 -1.000000000 0.000000000 </Rotation>
+                  <Translation>0.015886706 -0.005000000 0.015886706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;1&gt;"
+                      uid="MIfBp5aMc07HMXF4E">
+               <Transform>
+                  <Rotation>-0.000000000 0.000000000 -1.000000000 0.959210439 -0.282693002 -0.000000000 -0.282693002 -0.959210439 0.000000000 </Rotation>
+                  <Translation>0.023636706 -0.002500000 -0.012580489 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;9&gt;"
+                      uid="MaOzYWz4V5sOnwGph">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 0.382683432 -0.073175852 0.997319054 -0.000000000 -0.381657479 -0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.013379350 -0.020000000 0.019620564 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;16&gt;"
+                      uid="I0f991ocERm5KYjaz">
+               <Transform>
+                  <Rotation>-0.199894139 -0.678264206 -0.707106781 0.959210439 -0.282693002 -0.000000000 -0.199894139 -0.678264206 0.707106781 </Rotation>
+                  <Translation>0.001237437 -0.002500000 -0.009722718 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;11&gt;"
+                      uid="IE0ZZGL46vC5TM7j4">
+               <Transform>
+                  <Rotation>0.282693002 0.959210439 0.000000000 0.959210439 -0.282693002 -0.000000000 -0.000000000 0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.044353902 -0.002500000 0.023636706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;15&gt;"
+                      uid="IO4EDBqsllag8D9T+">
+               <Transform>
+                  <Rotation>-0.282693002 -0.959210439 0.000000000 0.959210439 -0.282693002 -0.000000000 0.000000000 -0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.012580489 -0.002500000 0.008136706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;10&gt;"
+                      uid="IXiws7ozYT75szRol">
+               <Transform>
+                  <Rotation>0.199894139 0.678264206 -0.707106781 0.959210439 -0.282693002 -0.000000000 -0.199894139 -0.678264206 -0.707106781 </Rotation>
+                  <Translation>0.041496131 -0.002500000 0.001237437 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;12&gt;"
+                      uid="IgKul7MFu8j0vgHLl">
+               <Transform>
+                  <Rotation>0.199894139 0.678264206 0.707106781 0.959210439 -0.282693002 -0.000000000 0.199894139 0.678264206 -0.707106781 </Rotation>
+                  <Translation>0.030535976 -0.002500000 0.041496131 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;13&gt;"
+                      uid="IjhKlk8pU1CigoZOg">
+               <Transform>
+                  <Rotation>0.000000000 -0.000000000 1.000000000 0.959210439 -0.282693002 -0.000000000 0.282693002 0.959210439 -0.000000000 </Rotation>
+                  <Translation>0.008136706 -0.002500000 0.044353902 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;14&gt;"
+                      uid="IqykbdSghgao83KeK">
+               <Transform>
+                  <Rotation>-0.199894139 -0.678264206 0.707106781 0.959210439 -0.282693002 0.000000000 0.199894139 0.678264206 0.707106781 </Rotation>
+                  <Translation>-0.009722718 -0.002500000 0.030535976 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;5&gt;"
+                      uid="I+tKZyVknV9t0GrRM">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.045152762 -0.020000000 0.012152849 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;6&gt;"
+                      uid="I6lCaUKau+miWK+98">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.033940697 -0.020000000 -0.007447756 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;7&gt;"
+                      uid="I7XUZL0ySdGudjn+a">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 0.382683432 </Rotation>
+                  <Translation>0.012152849 -0.020000000 -0.013379350 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;4&gt;"
+                      uid="ICKRdn/qbXbA79Csw">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 0.382683432 -0.073175852 0.997319054 -0.000000000 -0.381657479 -0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.039221169 -0.020000000 0.033940697 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;2&gt;"
+                      uid="IJBCqy7z+o3MZ36im">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 0.923879533 -0.073175852 0.997319054 -0.000000000 -0.921402661 -0.067605672 0.382683432 </Rotation>
+                  <Translation>-0.002167284 -0.020000000 0.039221169 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;8&gt;"
+                      uid="IRyL+HA1/c89nY9NT">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.007447756 -0.020000000 -0.002167284 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;3&gt;"
+                      uid="IkrTtT76/pFUkM9bM">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 0.923879533 -0.073175852 0.997319054 -0.000000000 -0.921402661 -0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.019620564 -0.020000000 0.045152762 </Translation>
+               </Transform>
+            </Instance>
+         </Instance>
+         <Instance entityUid="68bfa1e331bf84a16c6d9635" name="Omni-Wheel Assembly &lt;1&gt;"
+                   uid="MJF1YJ8s5dsZlxfbE">
+            <Transform>
+               <Rotation>0.500000000 0.750000000 -0.433012702 0.866025404 -0.433012702 0.250000000 -0.000000000 -0.500000000 -0.866025404 </Rotation>
+               <Translation>0.071416555 -0.059576755 -0.062241709 </Translation>
+            </Transform>
+            <Instance entityUid="JHD*:*f08dcbaab676ea1883a1ba96" name="Wheel &lt;1&gt;"
+                      uid="M7iIKqOhColVykTf2">
+               <Transform>
+                  <Rotation>-1.000000000 -0.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 -1.000000000 -0.000000000 </Rotation>
+                  <Translation>0.015886706 -0.005000000 0.015886706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;1&gt;"
+                      uid="MIfBp5aMc07HMXF4E">
+               <Transform>
+                  <Rotation>-0.000000000 -0.000000000 -1.000000000 0.234785898 -0.972047109 0.000000000 -0.972047109 -0.234785898 0.000000000 </Rotation>
+                  <Translation>0.023636706 -0.002500000 -0.012580489 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;9&gt;"
+                      uid="MaOzYWz4V5sOnwGph">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 0.382683432 -0.073175852 0.997319054 -0.000000000 -0.381657479 -0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.013379350 -0.020000000 0.019620564 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;16&gt;"
+                      uid="I0f991ocERm5KYjaz">
+               <Transform>
+                  <Rotation>-0.687341102 -0.166018701 -0.707106781 0.234785898 -0.972047109 0.000000000 -0.687341102 -0.166018701 0.707106781 </Rotation>
+                  <Translation>0.001237437 -0.002500000 -0.009722718 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;11&gt;"
+                      uid="IE0ZZGL46vC5TM7j4">
+               <Transform>
+                  <Rotation>0.972047109 0.234785898 -0.000000000 0.234785898 -0.972047109 0.000000000 0.000000000 -0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.044353902 -0.002500000 0.023636706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;15&gt;"
+                      uid="IO4EDBqsllag8D9T+">
+               <Transform>
+                  <Rotation>-0.972047109 -0.234785898 0.000000000 0.234785898 -0.972047109 0.000000000 -0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.012580489 -0.002500000 0.008136706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;10&gt;"
+                      uid="IXiws7ozYT75szRol">
+               <Transform>
+                  <Rotation>0.687341102 0.166018701 -0.707106781 0.234785898 -0.972047109 0.000000000 -0.687341102 -0.166018701 -0.707106781 </Rotation>
+                  <Translation>0.041496131 -0.002500000 0.001237437 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;12&gt;"
+                      uid="IgKul7MFu8j0vgHLl">
+               <Transform>
+                  <Rotation>0.687341102 0.166018701 0.707106781 0.234785898 -0.972047109 0.000000000 0.687341102 0.166018701 -0.707106781 </Rotation>
+                  <Translation>0.030535976 -0.002500000 0.041496131 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;13&gt;"
+                      uid="IjhKlk8pU1CigoZOg">
+               <Transform>
+                  <Rotation>0.000000000 0.000000000 1.000000000 0.234785898 -0.972047109 0.000000000 0.972047109 0.234785898 -0.000000000 </Rotation>
+                  <Translation>0.008136706 -0.002500000 0.044353902 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;14&gt;"
+                      uid="IqykbdSghgao83KeK">
+               <Transform>
+                  <Rotation>-0.687341102 -0.166018701 0.707106781 0.234785898 -0.972047109 0.000000000 0.687341102 0.166018701 0.707106781 </Rotation>
+                  <Translation>-0.009722718 -0.002500000 0.030535976 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;5&gt;"
+                      uid="I+tKZyVknV9t0GrRM">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.045152762 -0.020000000 0.012152849 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;6&gt;"
+                      uid="I6lCaUKau+miWK+98">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.033940697 -0.020000000 -0.007447756 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;7&gt;"
+                      uid="I7XUZL0ySdGudjn+a">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 0.382683432 </Rotation>
+                  <Translation>0.012152849 -0.020000000 -0.013379350 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;4&gt;"
+                      uid="ICKRdn/qbXbA79Csw">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 0.382683432 -0.073175852 0.997319054 -0.000000000 -0.381657479 -0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.039221169 -0.020000000 0.033940697 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;2&gt;"
+                      uid="IJBCqy7z+o3MZ36im">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 0.923879533 -0.073175852 0.997319054 -0.000000000 -0.921402661 -0.067605672 0.382683432 </Rotation>
+                  <Translation>-0.002167284 -0.020000000 0.039221169 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;8&gt;"
+                      uid="IRyL+HA1/c89nY9NT">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.007447756 -0.020000000 -0.002167284 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;3&gt;"
+                      uid="IkrTtT76/pFUkM9bM">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 0.923879533 -0.073175852 0.997319054 -0.000000000 -0.921402661 -0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.019620564 -0.020000000 0.045152762 </Translation>
+               </Transform>
+            </Instance>
+         </Instance>
+         <Instance entityUid="68bfa1e331bf84a16c6d9635" name="Omni-Wheel Assembly &lt;2&gt;"
+                   uid="MwcUoqqWQz7c0X0gz">
+            <Transform>
+               <Rotation>0.500000000 -0.750000000 0.433012702 -0.866025404 -0.433012702 0.250000000 -0.000000000 -0.500000000 -0.866025404 </Rotation>
+               <Translation>-0.087303261 -0.032060173 -0.062241709 </Translation>
+            </Transform>
+            <Instance entityUid="JHD*:*f08dcbaab676ea1883a1ba96" name="Wheel &lt;1&gt;"
+                      uid="M7iIKqOhColVykTf2">
+               <Transform>
+                  <Rotation>-1.000000000 -0.000000000 0.000000000 0.000000000 -0.000000000 -1.000000000 -0.000000000 -1.000000000 -0.000000000 </Rotation>
+                  <Translation>0.015886706 -0.005000000 0.015886706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;1&gt;"
+                      uid="MIfBp5aMc07HMXF4E">
+               <Transform>
+                  <Rotation>0.000000000 -0.000000000 -1.000000000 0.234785898 -0.972047109 0.000000000 -0.972047109 -0.234785898 0.000000000 </Rotation>
+                  <Translation>0.023636706 -0.002500000 -0.012580489 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;9&gt;"
+                      uid="MaOzYWz4V5sOnwGph">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 0.382683432 -0.073175852 0.997319054 0.000000000 -0.381657479 -0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.013379350 -0.020000000 0.019620564 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;16&gt;"
+                      uid="I0f991ocERm5KYjaz">
+               <Transform>
+                  <Rotation>-0.687341102 -0.166018701 -0.707106781 0.234785898 -0.972047109 0.000000000 -0.687341102 -0.166018701 0.707106781 </Rotation>
+                  <Translation>0.001237437 -0.002500000 -0.009722718 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;11&gt;"
+                      uid="IE0ZZGL46vC5TM7j4">
+               <Transform>
+                  <Rotation>0.972047109 0.234785898 -0.000000000 0.234785898 -0.972047109 0.000000000 0.000000000 -0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.044353902 -0.002500000 0.023636706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;15&gt;"
+                      uid="IO4EDBqsllag8D9T+">
+               <Transform>
+                  <Rotation>-0.972047109 -0.234785898 -0.000000000 0.234785898 -0.972047109 0.000000000 -0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.012580489 -0.002500000 0.008136706 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;10&gt;"
+                      uid="IXiws7ozYT75szRol">
+               <Transform>
+                  <Rotation>0.687341102 0.166018701 -0.707106781 0.234785898 -0.972047109 0.000000000 -0.687341102 -0.166018701 -0.707106781 </Rotation>
+                  <Translation>0.041496131 -0.002500000 0.001237437 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;12&gt;"
+                      uid="IgKul7MFu8j0vgHLl">
+               <Transform>
+                  <Rotation>0.687341102 0.166018701 0.707106781 0.234785898 -0.972047109 0.000000000 0.687341102 0.166018701 -0.707106781 </Rotation>
+                  <Translation>0.030535976 -0.002500000 0.041496131 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;13&gt;"
+                      uid="IjhKlk8pU1CigoZOg">
+               <Transform>
+                  <Rotation>-0.000000000 0.000000000 1.000000000 0.234785898 -0.972047109 0.000000000 0.972047109 0.234785898 0.000000000 </Rotation>
+                  <Translation>0.008136706 -0.002500000 0.044353902 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;14&gt;"
+                      uid="IqykbdSghgao83KeK">
+               <Transform>
+                  <Rotation>-0.687341102 -0.166018701 0.707106781 0.234785898 -0.972047109 0.000000000 0.687341102 0.166018701 0.707106781 </Rotation>
+                  <Translation>-0.009722718 -0.002500000 0.030535976 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;5&gt;"
+                      uid="I+tKZyVknV9t0GrRM">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.045152762 -0.020000000 0.012152849 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;6&gt;"
+                      uid="I6lCaUKau+miWK+98">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.033940697 -0.020000000 -0.007447756 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;7&gt;"
+                      uid="I7XUZL0ySdGudjn+a">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 -0.923879533 -0.073175852 0.997319054 -0.000000000 0.921402661 0.067605672 0.382683432 </Rotation>
+                  <Translation>0.012152849 -0.020000000 -0.013379350 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;4&gt;"
+                      uid="ICKRdn/qbXbA79Csw">
+               <Transform>
+                  <Rotation>-0.921402661 -0.067605672 0.382683432 -0.073175852 0.997319054 0.000000000 -0.381657479 -0.028003186 -0.923879533 </Rotation>
+                  <Translation>0.039221169 -0.020000000 0.033940697 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;2&gt;"
+                      uid="IJBCqy7z+o3MZ36im">
+               <Transform>
+                  <Rotation>0.381657479 0.028003186 0.923879533 -0.073175852 0.997319054 0.000000000 -0.921402661 -0.067605672 0.382683432 </Rotation>
+                  <Translation>-0.002167284 -0.020000000 0.039221169 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;8&gt;"
+                      uid="IRyL+HA1/c89nY9NT">
+               <Transform>
+                  <Rotation>0.921402661 0.067605672 -0.382683432 -0.073175852 0.997319054 -0.000000000 0.381657479 0.028003186 0.923879533 </Rotation>
+                  <Translation>-0.007447756 -0.020000000 -0.002167284 </Translation>
+               </Transform>
+            </Instance>
+            <Instance entityUid="JND*:*230f61601132949e45bb945a" name="Roller &lt;3&gt;"
+                      uid="IkrTtT76/pFUkM9bM">
+               <Transform>
+                  <Rotation>-0.381657479 -0.028003186 0.923879533 -0.073175852 0.997319054 0.000000000 -0.921402661 -0.067605672 -0.382683432 </Rotation>
+                  <Translation>0.019620564 -0.020000000 0.045152762 </Translation>
+               </Transform>
+            </Instance>
+         </Instance>
+         <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="motor &lt;3&gt;"
+                   uid="I3NVLm6n7m5uyeIgO">
+            <Transform>
+               <Rotation>-0.750000000 0.500000000 -0.433012702 -0.433012702 -0.866025404 -0.250000000 -0.500000000 0.000000000 0.866025404 </Rotation>
+               <Translation>-0.061230762 -0.035351597 -0.068500000 </Translation>
+            </Transform>
+         </Instance>
+         <Instance entityUid="JHD*:*edd56b0e311e460d178ecae4" name="motor &lt;1&gt;"
+                   uid="IVD/PTas66LNPBHwS">
+            <Transform>
+               <Rotation>-0.000000000 -1.000000000 0.000000000 0.866025404 -0.000000000 0.500000000 -0.500000000 0.000000000 0.866025404 </Rotation>
+               <Translation>0.000000000 0.070703194 -0.068500000 </Translation>
+            </Transform>
+         </Instance>
+      </InstanceTree>
+      <Constraints/>
+      <Joints>
+         <Cylindrical name="Cylindrical1">
+            <BaseFrame>
+               <InstancePath>
+                  <Uid>M63qit4lWCDRgHu6T</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>0.866025404 0.000000000 0.500000000 -0.500000000 0.000000000 0.866025404 0.000000000 -1.000000000 0.000000000 </Rotation>
+                  <Translation>0.015980762 -0.032320508 -0.005000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath>
+                  <Uid>M75ao5lEVQ+7N0r72</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 -1.000000000 0.000000000 </Rotation>
+                  <Translation>-0.047000000 -0.020000000 0.000000000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Cylindrical>
+         <Weld name="Fastened1">
+            <BaseFrame>
+               <InstancePath>
+                  <Uid>M63qit4lWCDRgHu6T</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>-0.000000000 0.000000000 0.040000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath/>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Weld>
+         <Cylindrical name="Cylindrical2">
+            <BaseFrame>
+               <InstancePath>
+                  <Uid>M75ao5lEVQ+7N0r72</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>-0.000000000 0.000000000 1.000000000 -1.000000000 0.000000000 -0.000000000 -0.000000000 -1.000000000 -0.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath>
+                  <Uid>MJF1YJ8s5dsZlxfbE</Uid>
+                  <Uid>M7iIKqOhColVykTf2</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.006250000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Cylindrical>
+         <Cylindrical name="Cylindrical3">
+            <BaseFrame>
+               <InstancePath>
+                  <Uid>I3NVLm6n7m5uyeIgO</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>-0.000000000 0.000000000 1.000000000 -1.000000000 0.000000000 -0.000000000 -0.000000000 -1.000000000 -0.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath>
+                  <Uid>MwcUoqqWQz7c0X0gz</Uid>
+                  <Uid>M7iIKqOhColVykTf2</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 -0.005000000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Cylindrical>
+         <Cylindrical name="Cylindrical4">
+            <BaseFrame>
+               <InstancePath>
+                  <Uid>IVD/PTas66LNPBHwS</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>0.000000000 0.000000000 -1.000000000 1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+               </Transform>
+            </BaseFrame>
+            <FollowerFrame>
+               <InstancePath>
+                  <Uid>MGRCPFjCcvYpZl8DC</Uid>
+                  <Uid>M7iIKqOhColVykTf2</Uid>
+               </InstancePath>
+               <Transform>
+                  <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                  <Translation>0.000000000 0.000000000 0.006250000 </Translation>
+               </Transform>
+            </FollowerFrame>
+         </Cylindrical>
+      </Joints>
+   </RootAssembly>
+   <Assemblies>
+      <Assembly name="Omni-Wheel Assembly" uid="68bfa1e331bf84a16c6d9635">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <Constraints/>
+         <Joints>
+            <Weld name="Fastened1">
+               <BaseFrame>
+                  <InstancePath/>
+                  <Transform>
+                     <Rotation>-1.000000000 0.000000000 0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>M7iIKqOhColVykTf2</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                     <Translation>0.015886706 0.015886706 -0.005000000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Weld>
+            <Revolute name="Revolute1">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>M7iIKqOhColVykTf2</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>0.000000000 0.000000000 1.000000000 0.000000000 1.000000000 -0.000000000 -1.000000000 0.000000000 -0.000000000 </Rotation>
+                     <Translation>0.009500000 0.028467195 -0.002500000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>MIfBp5aMc07HMXF4E</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 0.017250000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Revolute>
+            <Revolute name="Revolute2">
+               <BaseFrame>
+                  <InstancePath>
+                     <Uid>M7iIKqOhColVykTf2</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>-0.923879533 0.000000000 0.382683432 0.382683432 -0.000000000 0.923879533 0.000000000 1.000000000 0.000000000 </Rotation>
+                     <Translation>0.029935752 -0.002117069 0.015000000 </Translation>
+                  </Transform>
+               </BaseFrame>
+               <FollowerFrame>
+                  <InstancePath>
+                     <Uid>MaOzYWz4V5sOnwGph</Uid>
+                  </InstancePath>
+                  <Transform>
+                     <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+                     <Translation>0.000000000 0.000000000 -0.001750000 </Translation>
+                  </Transform>
+               </FollowerFrame>
+            </Revolute>
+         </Joints>
+      </Assembly>
+   </Assemblies>
+   <Parts>
+      <Part name="Roller" uid="JND*:*230f61601132949e45bb945a">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0</Mass>
+            <CenterOfMass>0.000000000 0.000000000 0.000000000 </CenterOfMass>
+            <Inertia>0.000000000 0.000000000 0.000000000 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Roller.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Diffuse a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Specular a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="Body" uid="JHD*:*a90084dd80f5387f56427dff">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>2.10244877</Mass>
+            <CenterOfMass>-0.000000000 -0.000000000 0.048428961 </CenterOfMass>
+            <Inertia>0.003451998 0.003451998 0.002632380 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Body.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.917647059" g="0.917647059" r="0.917647059"/>
+            <Diffuse a="1.000000000" b="0.917647059" g="0.917647059" r="0.917647059"/>
+            <Specular a="1.000000000" b="0.917647059" g="0.917647059" r="0.917647059"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="motor" uid="JHD*:*edd56b0e311e460d178ecae4">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.0612371053</Mass>
+            <CenterOfMass>-0.029495078 0.000000000 0.000000000 </CenterOfMass>
+            <Inertia>0.000011441 0.000021931 0.000025291 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="motor.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.400000000" g="0.376470588" r="0.349019608"/>
+            <Diffuse a="1.000000000" b="0.400000000" g="0.376470588" r="0.349019608"/>
+            <Specular a="1.000000000" b="0.400000000" g="0.376470588" r="0.349019608"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+      <Part name="Wheel" uid="JHD*:*f08dcbaab676ea1883a1ba96">
+         <ModelUnits length="millimeter" mass="kilogram"/>
+         <MassProperties>
+            <Mass>0.0426957375</Mass>
+            <CenterOfMass>-0.000000000 -0.000000000 0.006250000 </CenterOfMass>
+            <Inertia>0.000010945 0.000010945 0.000018550 0.000000000 0.000000000 0.000000000 </Inertia>
+         </MassProperties>
+         <GeometryFile name="Wheel.step" type="STEP"/>
+         <VisualProperties>
+            <Ambient a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Diffuse a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Specular a="1.000000000" b="0.929411765" g="0.811764706" r="0.615686275"/>
+            <Emissive a="1" b="0" g="0" r="0"/>
+            <Shininess>0.5</Shininess>
+         </VisualProperties>
+      </Part>
+   </Parts>
+</SimscapeMultibodyImportXML>
