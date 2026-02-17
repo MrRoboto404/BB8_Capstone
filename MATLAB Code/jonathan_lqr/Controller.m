@@ -7,26 +7,30 @@ clearvars; clc;
 bb = params;
 test = ['Test I (Note: \beta = 0)'];
 %% LQR Controller
-%% yz and xz planes
+%% Fullstate feedback
+% yz and xz planes
 [A_vert,B_vert,C_vert,D_vert] = get_linearized_matrices_vertical(bb);
 Q = diag([1 1 1 1]);              % State weighting matrix
 R = 1;                  % Control weighting matrix
 [K_vert, S_vert, E_vert] = lqr(A_vert,B_vert, Q, R);    % Compute the state feedback gain using LQR
-% %% Velocity control (make robot move at constant speed)
-% % Only feedback [theta; dot(phi), dot(theta)]
-% A_vel = A(2:4,2:4);             % Remove the row and collumn contain phi
-% B_vel = B(2:4);
-% C_vel = [0 1 0];
-% K_vel = K(2:4);
-% Kr = -1 / (C_vel * inv(A_vel - B_vel*K_vel) * B_vel);   % DC gain for if the ref is the output
-%%xy planes
+% xy planes
 [A_xy,B_xy,C_xy,D_xy] = statespace_xy(bb);
 Q = diag([1 1]);              % State weighting matrix
 R = 1;                  % Control weighting matrix
 [K_xy, S_xy, E_xy] = lqr(A_xy,B_xy, Q, R);    % Compute the state feedback gain using LQR
-%%
+%% Velocity control (make robot move at constant speed)
+% Vertical Planes
+% Only feedback [theta; dot(phi), dot(theta)]
+A_vert_vel = A_vert(2:4,2:4);             % Remove the row and collumn contain phi
+B_vert_vel = B_vert(2:4);
+C_vert_vel = [0 1 0];
+K_vert_vel = K_vert(2:4);
+N_vert = -1 / (C_vert_vel * inv(A_vert_vel - B_vert_vel*K_vert_vel) * B_vert_vel);   % DC gain for if the ref is the output
 
-% Simulate
+dotphi_x_ref = 0.2;
+dotphi_y_ref = 0.1;
+K_vert(1) = 0;                  % Disable phi feedback
+%% Simulate
 T_sim = 5; % s
 % [\phi, \theta, \dot{\phi}, \dot{\theta}]
 ic_xz = [0; 0.175; 0; 0];  % initial condition
