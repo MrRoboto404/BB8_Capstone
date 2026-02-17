@@ -1,30 +1,34 @@
 clearvars; clc;
-close all;
+% close all;
 
 % %% This script is the first attempt to implement LQR control %%
 
 % Parameters
 bb = params;
-[A,B,C,D] = get_linearized_matrices(bb);
+[A,B,C,D] = get_linearized_matrices_vertical(bb);
 test = ['Test I (Note: \beta = 0)'];
-% LQR Controller
-Q = [1  0   0   0;              % State weighting matrix
-     0  1   0   0;
-     0  0   1   0;
-     0  0   0   1];
+%% LQR Controller
+%% Full state control
+Q = diag([1 1 1 1]);              % State weighting matrix
 R = 1;                  % Control weighting matrix
 [K, S, E] = lqr(A, B, Q, R);    % Compute the state feedback gain using LQR
+% %% Velocity control (make robot move at constant speed)
+% % Only feedback [theta; dot(phi), dot(theta)]
+% A_vel = A(2:4,2:4);             % Remove the row and collumn contain phi
+% B_vel = B(2:4);
+% C_vel = [0 1 0];
+% K_vel = K(2:4);
+% Kr = -1 / (C_vel * inv(A_vel - B_vel*K_vel) * B_vel);   % DC gain for if the ref is the output
 
-Kr = -1 / (C * inv(A - B*K) * B);
+%%
 
-% %%
 % Simulate
 T_sim = 5; % s
 % [\phi, \theta, \dot{\phi}, \dot{\theta}]
 ic = [0; 0.175; 0; 0];  % initial condition
-ref = [0;0; 0; 0];     % reference
+ref = [0;0; 1; 0];     % reference
 %%
-simout = sim(   'LQR_sim', ...
+simout = sim(   'LQR_test_sim', ...
                 'Solver','ode45', ...
                 'RelTol','auto', ...
                 'AbsTol','auto', ...

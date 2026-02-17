@@ -1,4 +1,4 @@
-function [A, B, C, D] = get_linearized_matrices(p)
+function [A, B, C, D] = get_linearized_matrices_vertical(p)
     % GET_LINEARIZED_MATRICES Linearizes the Ballbot dynamics about the
     % ICs: (theta = 0, theta_dot = 0) (upright equilibrium)
     %
@@ -15,15 +15,15 @@ function [A, B, C, D] = get_linearized_matrices(p)
     % Output:       y = x = [phi; theta; phi_dot; theta_dot] (states themself)
 
 
-    m_tot = p.m_k + p.m_A + p.m_w;
-    r_tot = p.r_k + p.r_w;
-    gamma = p.l*p.m_A + (p.r_k + p.r_w)*p.m_w;
+    m_tot = p.m_ball + p.m_body + p.m_virt;
+    r_tot = p.r_ball + p.r_omni;
+    gamma = p.l*p.m_body + (p.r_ball + p.r_omni)*p.m_virt;
 
     %% M Matrix
-    M11 = m_tot * p.r_k^2 + p.Theta_k + (p.r_k / p.r_w)^2 * p.Theta_w;
-    M12 = -(p.r_k / p.r_w^2) * r_tot * p.Theta_w + gamma * p.r_k; 
-    M22 = (r_tot^2 / p.r_w^2) * p.Theta_w + p.Theta_A + ...
-           p.m_A * p.l^2 + p.m_w * r_tot^2;
+    M11 = m_tot * p.r_ball^2 + p.Theta_ball + (p.r_ball / p.r_omni)^2 * p.Theta_virt_vertical;
+    M12 = -(p.r_ball / p.r_omni^2) * r_tot * p.Theta_virt_vertical + gamma * p.r_ball; 
+    M22 = (r_tot^2 / p.r_omni^2) * p.Theta_virt_vertical + p.Theta_body_vertical + ...
+           p.m_body * p.l^2 + p.m_virt * r_tot^2;
     M21 = M12;
     M = [M11, M12;
          M21, M22];
@@ -32,8 +32,8 @@ function [A, B, C, D] = get_linearized_matrices(p)
     G_matrix = [0, 0; 
          0, -p.g * gamma]; 
     %% f_NP = S*u(t)
-    S = [ (p.r_k / p.r_w); 
-         -(p.r_k / p.r_w)];
+    S = [ (p.r_ball / p.r_omni); 
+         -(p.r_ball / p.r_omni)];
 
     %% Solve for State Space Matrices
     % The linearized equation of motion is: M * q_ddot + G_grad * q = S * u
