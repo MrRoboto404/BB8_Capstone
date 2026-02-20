@@ -4,15 +4,14 @@ close all;
 % %% This script is the first attempt to implement LQR control %%
 
 % Parameters
-bb = params;
-[A,B,C,D] = get_linearized_matrices(bb);
+[A,B,C,D, bb] = make_ballbot();
 test = ['Test I (Note: \beta = 0)'];
 % LQR Controller
-Q = [1  0   0   0;              % State weighting matrix
-     0  1   0   0;
-     0  0   1   0;
-     0  0   0   1];
-R = 1;                  % Control weighting matrix
+Q = [20  0   0   0;              % State weighting matrix
+     0  100   0   0;
+     0  0   10   0;
+     0  0   0   50];
+R = 200;                  % Control weighting matrix
 [K, S, E] = lqr(A, B, Q, R);    % Compute the state feedback gain using LQR
 
 Kr = -1 / (C * inv(A - B*K) * B);
@@ -45,7 +44,7 @@ psidot_omni_3 = -0.5 * dotpsi_virt * cos(bb.alpha)* rads_to_rpm * bb.i_Gear;
 
 t = simout.get('tout');
 u = simout.logsout.get("u").Values.Data;
-uvirt = squeeze(u)./bb.i_Gear; % virt wheel torque
+uvirt = squeeze(u)./bb.i_Gear; % virt wheel torque divided by motor torque
 
 [T1, T2, T3] = real_motor_torques_from_virtual(uvirt,0,0,bb);
 % 
