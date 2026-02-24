@@ -1,5 +1,5 @@
 clearvars; clc;
-% close all;
+close all;
 
 % This script is the second attempt to implement LQR control for all 3 planes %%
 
@@ -10,7 +10,7 @@ K_xy = get_gains_LQR_xy;
 
 %% Simulation
 % Initial condition
-T_max = 8;      % Maximum Motor Torque
+T_max = 20;      % Maximum Motor Torque
 ic_xz = [0; deg2rad(10); 0; 0];  % initial condition
 ic_yz = [0; deg2rad(10); 0; 0];
 ic_xy = [0; 0];
