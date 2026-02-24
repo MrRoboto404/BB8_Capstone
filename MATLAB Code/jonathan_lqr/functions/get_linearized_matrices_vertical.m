@@ -1,6 +1,6 @@
 function [A, B, C, D] = get_linearized_matrices_vertical(p)
     % GET_LINEARIZED_MATRICES Linearizes the Ballbot dynamics about the
-    % ICs: (theta = 0, theta_dot = 0) (upright equilibrium)
+    % ICs: (0's) (upright equilibrium)
     %
     % Inputs:
     %   p - Struct containing physical parameters (from params.m)
@@ -11,7 +11,7 @@ function [A, B, C, D] = get_linearized_matrices_vertical(p)
     %                y     = Cx + Du    
     %
     % State Vector: x = [phi; theta; phi_dot; theta_dot]
-    % Input:        u = M (Motor Torque)
+    % Input:        u = M (Virtual Torque)
     % Output:       y = x = [phi; theta; phi_dot; theta_dot] (states themself)
 
 
