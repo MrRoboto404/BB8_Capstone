@@ -17,104 +17,109 @@ ic_xy = [0; 0];
 T_sim = 5; % s
 
 %% Nonlinear
-simout = sim(   'LQR_nonlinear_sim', ...
-                'Solver','ode45', ...
-                'RelTol','auto', ...
-                'AbsTol','auto', ...
-                'MaxStep','T_sim/500');
-% Extract the simulation results
-px = squeeze(simout.logsout.get('phi_x').Values.Data);
-tx = squeeze(simout.logsout.get('theta_x').Values.Data);
-dpx = squeeze(simout.logsout.get('dotphi_x').Values.Data);
-dtx = squeeze(simout.logsout.get('dottheta_x').Values.Data);
-
-py = squeeze(simout.logsout.get('phi_y').Values.Data);
-ty = squeeze(simout.logsout.get('theta_y').Values.Data);
-dpy = squeeze(simout.logsout.get('dotphi_y').Values.Data);
-dty = squeeze(simout.logsout.get('dottheta_y').Values.Data);
-
-tz = squeeze(simout.logsout.get('theta_z').Values.Data);
-dtz = squeeze(simout.logsout.get('dottheta_z').Values.Data);
-
-T1 = squeeze(simout.logsout.get("T1").Values.Data);
-T2 = squeeze(simout.logsout.get("T2").Values.Data);
-T3 = squeeze(simout.logsout.get("T3").Values.Data);
-w1 = simout.logsout.get("psidot_omni_1").Values.Data;
-w2 = simout.logsout.get("psidot_omni_2").Values.Data;
-w3 = simout.logsout.get("psidot_omni_3").Values.Data;
-
-t = simout.get('tout');
-
-
-% figure('Name', 'Original', 'NumberTitle', 'off')
-figure
-subplot(3,3,1)
-plot(t,tx)
-legend('theta_x')
-ylabel('Angle (rad)')
-title('yz plane')
-grid
-
-subplot(3,3,2)
-plot(t,ty)
-legend('theta_y')
-ylabel('Angle (rad)')
-title('xz plane')
-grid
-
-subplot(3,3,3)
-plot(t,tz)
-legend('theta_z')
-ylabel('Angle (rad)')
-title('xy plane')
-grid
-
-subplot(3,3,4)
-plot(t,px)
-legend('phi_x',Location='southeast')
-ylabel('Angle (rad)')
-grid
-
-subplot(3,3,5)
-plot(t,py)
-legend('phi_y',Location='southeast')
-ylabel('Angle (rad)')
-grid
-
-subplot(3,3,7)
-plot(t,dpx,t,dtx)
-ylabel('Angle rate (rad/s)')
-legend('dotphi x','dottheta x')
-grid
-
-subplot(3,3,8)
-plot(t,dpy,t,dty)
-ylabel('Angle rate (rad/s)')
-legend('dotphi y','dottheta y')
-grid
-
-subplot(3,3,6)
-plot(t,dtz)
-ylabel('Angle rate (rad/s)')
-legend('dottheta z')
-grid
-
-figure
-subplot(2,1,1)
-plot(t,T1,t,T2,'g',t,T3,'r--')
-legend('T1','T2','T3')
-xlabel('Time (s)')
-ylabel('Motor Torque (Nm)')
-title('Motor spec');
-grid
-
-subplot(2,1,2)
-plot(t,w1,t,w2,'g',t,w3,'r--')
-legend('omega 1','omega 2','omega 3')
-xlabel('Time (s)')
-ylabel('Motor speed (rpm)')
-grid
-
+for (i = [1,2])
+    simulink_filename = ["LQR_nonlinear_sim","LQR_2"];
+    graph_title = ["Nonlinear Unlimited Torque","Nonlinear Limited Torque"];
+    simout = sim(   simulink_filename(i), ...
+                    'Solver','ode45', ...
+                    'RelTol','auto', ...
+                    'AbsTol','auto', ...
+                    'MaxStep','T_sim/500');
+    % Extract the simulation results
+    px = squeeze(simout.logsout.get('phi_x').Values.Data);
+    tx = squeeze(simout.logsout.get('theta_x').Values.Data);
+    dpx = squeeze(simout.logsout.get('dotphi_x').Values.Data);
+    dtx = squeeze(simout.logsout.get('dottheta_x').Values.Data);
+    
+    py = squeeze(simout.logsout.get('phi_y').Values.Data);
+    ty = squeeze(simout.logsout.get('theta_y').Values.Data);
+    dpy = squeeze(simout.logsout.get('dotphi_y').Values.Data);
+    dty = squeeze(simout.logsout.get('dottheta_y').Values.Data);
+    
+    tz = squeeze(simout.logsout.get('theta_z').Values.Data);
+    dtz = squeeze(simout.logsout.get('dottheta_z').Values.Data);
+    
+    T1 = squeeze(simout.logsout.get("T1").Values.Data);
+    T2 = squeeze(simout.logsout.get("T2").Values.Data);
+    T3 = squeeze(simout.logsout.get("T3").Values.Data);
+    w1 = simout.logsout.get("psidot_omni_1").Values.Data;
+    w2 = simout.logsout.get("psidot_omni_2").Values.Data;
+    w3 = simout.logsout.get("psidot_omni_3").Values.Data;
+    
+    t = simout.get('tout');
+    
+    
+    % figure('Name', 'Original', 'NumberTitle', 'off')
+    figure
+    sgtitle(graph_title(i));
+    subplot(3,3,1)
+    plot(t,tx)
+    legend('theta_x')
+    ylabel('Angle (rad)')
+    title('yz plane')
+    grid
+    
+    subplot(3,3,2)
+    plot(t,ty)
+    legend('theta_y')
+    ylabel('Angle (rad)')
+    title('xz plane')
+    grid
+    
+    subplot(3,3,3)
+    plot(t,tz)
+    legend('theta_z')
+    ylabel('Angle (rad)')
+    title('xy plane')
+    grid
+    
+    subplot(3,3,4)
+    plot(t,px)
+    legend('phi_x',Location='southeast')
+    ylabel('Angle (rad)')
+    grid
+    
+    subplot(3,3,5)
+    plot(t,py)
+    legend('phi_y',Location='southeast')
+    ylabel('Angle (rad)')
+    grid
+    
+    subplot(3,3,7)
+    plot(t,dpx,t,dtx)
+    ylabel('Angle rate (rad/s)')
+    legend('dotphi x','dottheta x')
+    grid
+    
+    subplot(3,3,8)
+    plot(t,dpy,t,dty)
+    ylabel('Angle rate (rad/s)')
+    legend('dotphi y','dottheta y')
+    grid
+    
+    subplot(3,3,6)
+    plot(t,dtz)
+    ylabel('Angle rate (rad/s)')
+    legend('dottheta z')
+    grid
+    
+    figure
+    sgtitle(graph_title(i));
+    subplot(2,1,1)
+    plot(t,T1,t,T2,'g',t,T3,'r--')
+    legend('T1','T2','T3')
+    xlabel('Time (s)')
+    ylabel('Motor Torque (Nm)')
+    title('Motor spec');
+    grid
+    
+    subplot(2,1,2)
+    plot(t,w1,t,w2,'g',t,w3,'r--')
+    legend('omega 1','omega 2','omega 3')
+    xlabel('Time (s)')
+    ylabel('Motor speed (rpm)')
+    grid
+end
 
 
 %% Linearized Model
@@ -129,6 +134,7 @@ qz = initial(sys_linearized_xy, ic_xy, t);
 
 
 figure
+sgtitle('Linear model sanity check');
 subplot(3,3,1)
 plot(t,qx(:,2))
 legend('theta_x')
