@@ -5,8 +5,8 @@ clear; clc; close all;
 % Input parameters and configurations into simulink model
 mdl = "multibody_test";
 icxy = [0; deg2rad(0); 0; deg2rad(0)]; % rad and rad/s
-icxz = [0; deg2rad(0); 0; deg2rad(0)];
-icyz = [0; deg2rad(10); 0; deg2rad(0)];
+icxz = [0; deg2rad(10); 0; deg2rad(0)];
+icyz = [0; deg2rad(0); 0; deg2rad(0)];
 motor_torque = [0, 0, 0]; % FL FR B legs
 
 % get controller specs from jonathan's controller
