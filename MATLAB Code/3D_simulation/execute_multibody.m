@@ -4,10 +4,18 @@ clear; clc; close all;
 
 % Input parameters and configurations into simulink model
 mdl = "multibody_test";
-icxy = [0; 0; 0; 0]; % rad and rad/s
-icxz = [0; 0; 0; 0];
-icyz = [0; 0.3; 0; -0.7];
+icxy = [0; deg2rad(0); 0; deg2rad(0)]; % rad and rad/s
+icxz = [0; deg2rad(0); 0; deg2rad(0)];
+icyz = [0; deg2rad(10); 0; deg2rad(0)];
 motor_torque = [0, 0, 0]; % FL FR B legs
+
+% get controller specs from jonathan's controller
+K_vert = get_gains_LQR_vertical(1);
+K_xy = get_gains_LQR_xy;
+T_max = 5;      % Maximum Motor Torque
+ic_xz = icxz;
+ic_yz = icyz;
+ic_xy = icxy;
 
 % create ballbot sim model
 bb8 = ballbot_system(); % make object, complete with matrices and parameters
