@@ -41,6 +41,8 @@ classdef ballbot_system
             [obj.Axz, obj.Bxz, obj.Cxz, obj.Dxz] = make_ballbot(); % xz plane dynamics same as yz
             [obj.Axy, obj.Bxy, obj.Cxy, obj.Dxy] = deal(zeros(4, 4));
 
+            % friction stuff
+
 
             % empty stuff
             obj.simIn = []; 
@@ -117,6 +119,7 @@ classdef ballbot_system
             mw.assignin("legFL_torque", obj.motor_torque(1));
             mw.assignin("legFR_torque", obj.motor_torque(2));
             mw.assignin("legB_torque", obj.motor_torque(3));
+
 
             % System parameters
             mw.assignin("r_ball", obj.params.r_ball);

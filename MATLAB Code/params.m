@@ -37,6 +37,13 @@ p.i_Gear = 26;  % -, Gear ratio
 %_______Inertia Constants_______
 p.Theta_motor_rotor = 3.33 * 10^-6; % rotor intertia (real small)
 
+%_______Friction_______
+p.mu_s = 0.7;
+p.mu_d = 0.6;
+p.v_c  = 0.02;     % Stribeck velocity
+p.v_s  = 0.001;    % smoothing velocity
+
+
 % CALCULATIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % _________Inertias___________
@@ -52,6 +59,5 @@ p.m_virt = 3/2 * cos(p.alpha)^2 * p.m_omni;
 %           XY Plane
 p.Theta_virt_xy = 3*(p.Theta_omni + (p.i_Gear^2)*p.Theta_motor_rotor);   % kg*m^2, Inertia of actuating wheel in XY plane
 p.Theta_body_xy = 0.5 * (p.m_body + p.m_virt) * p.r_body^2; % kg*m^2, interia of body in XY plane
-
 
 end
