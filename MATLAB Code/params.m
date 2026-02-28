@@ -14,7 +14,7 @@ p = struct(...
 
 % VARIABLE properties %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %_______Masses_______
-p.m_ball = 2.29;   %kg, Mass of the Ball
+p.m_ball = 229;   %kg, Mass of the Ball
 p.m_body = 9.2;    %kg, Mass of the body
 p.m_omni = 4; %kg, reverse engineered from inertia given
 

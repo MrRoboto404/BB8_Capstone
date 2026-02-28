@@ -4,7 +4,7 @@
 function [K, N] = get_gains_LQR_vertical(control_mode)
 
 [A,B,C,D] = get_linearized_matrices_vertical(params());
-Q = diag([2 150 1 5]);               % State weighting matrix
+Q = diag([2 150 5 1]);               % State weighting matrix
 R = 1;                              % Control weighting matrix
 [K, S, E] = lqr(A,B, Q, R);    % Compute the state feedback gain using lqr()
 
