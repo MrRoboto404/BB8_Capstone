@@ -10,21 +10,22 @@ K_xy = get_gains_LQR_xy;
 
 % Simulation
 % Initial condition
-T_max = 5;      % Maximum Motor Torque
+T_max = 6.9;      % Maximum Motor Torque
 ic_xz = [0; deg2rad(10); 0; 0];  % initial condition
 ic_yz = [0; deg2rad(10); 0; 0];
 ic_xy = [0; 0];
-T_sim = 1; % s
+T_sim = 3; % s
 
 % Nonlinear
 for (i = [1,2])
     simulink_filename = ["LQR_nonlinear_sim","LQR_2"];
     graph_title = ["Nonlinear Unlimited Torque","Nonlinear Limited Torque"];
     simout = sim(   simulink_filename(i), ...
+                    'StopTime', num2str(T_sim), ...
                     'Solver','ode45', ...
                     'RelTol','auto', ...
                     'AbsTol','auto', ...
-                    'MaxStep','T_sim/500');
+                    'MaxStep',num2str(T_sim/500));
     % Extract the simulation results
     px = squeeze(simout.logsout.get('phi_x').Values.Data);
     tx = squeeze(simout.logsout.get('theta_x').Values.Data);
@@ -121,71 +122,6 @@ for (i = [1,2])
     grid
 end
 
-
-% % Linearized Model
-% t = linspace(0,10,1000);
-% [A,B,C,D] = get_linearized_matrices_vertical(params());
-% sys_linearized_vert = ss(A - B*K_vert,B,C,D);
-% qx = initial(sys_linearized_vert, ic_yz, t);
-% qy = initial(sys_linearized_vert, ic_xz, t);
-% [A,B,C,D] = get_statespace_xy(params());
-% sys_linearized_xy = ss(A - B*K_xy,B,C,D);
-% qz = initial(sys_linearized_xy, ic_xy, t);
-% 
-% 
-% figure
-% sgtitle('Linear model sanity check');
-% subplot(3,3,1)
-% plot(t,qx(:,2))
-% legend('theta_x')
-% ylabel('Angle (rad)')
-% title('yz plane')
-% grid
-% 
-% subplot(3,3,2)
-% plot(t,qy(:,2))
-% legend('theta_y')
-% ylabel('Angle (rad)')
-% title('xz plane')
-% grid
-% 
-% subplot(3,3,3)
-% plot(t,qz(:,1))
-% legend('theta_z')
-% ylabel('Angle (rad)')
-% title('xy plane')
-% grid
-% 
-% subplot(3,3,4)
-% plot(t,qx(:,1))
-% legend('phi_x',Location='southeast')
-% ylabel('Angle (rad)')
-% grid
-% 
-% subplot(3,3,5)
-% plot(t,qy(:,1))
-% legend('phi_y',Location='southeast')
-% ylabel('Angle (rad)')
-% grid
-% 
-% subplot(3,3,7)
-% plot(t,qx(:,3),t,qx(:,4))
-% ylabel('Angle rate (rad/s)')
-% legend('dotphi x','dottheta x')
-% grid
-% 
-% subplot(3,3,8)
-% plot(t,qy(:,3),t,qy(:,4))
-% ylabel('Angle rate (rad/s)')
-% legend('dotphi y','dottheta y')
-% grid
-% 
-% subplot(3,3,6)
-% plot(t,qz(:,2))
-% ylabel('Angle rate (rad/s)')
-% legend('dottheta z')
-% grid
-
 % Plot torque-vel plots
 
 figure;
@@ -209,3 +145,67 @@ grid on;
 legend("Power of Motor 1", "Power of Motor 2", "Power of Motor 3")
 ylabel("Power (W)")
 xlabel ("Time (s)")
+
+% Linearized Model
+t = linspace(0,T_sim,500);
+[A,B,C,D] = get_linearized_matrices_vertical(params());
+sys_linearized_vert = ss(A - B*K_vert,B,C,D);
+qx = initial(sys_linearized_vert, ic_yz, t);
+qy = initial(sys_linearized_vert, ic_xz, t);
+[A,B,C,D] = get_statespace_xy(params());
+sys_linearized_xy = ss(A - B*K_xy,B,C,D);
+qz = initial(sys_linearized_xy, ic_xy, t);
+
+
+figure
+sgtitle('Linear model sanity check');
+subplot(3,3,1)
+plot(t,qx(:,2))
+legend('theta_x')
+ylabel('Angle (rad)')
+title('yz plane')
+grid
+
+subplot(3,3,2)
+plot(t,qy(:,2))
+legend('theta_y')
+ylabel('Angle (rad)')
+title('xz plane')
+grid
+
+subplot(3,3,3)
+plot(t,qz(:,1))
+legend('theta_z')
+ylabel('Angle (rad)')
+title('xy plane')
+grid
+
+subplot(3,3,4)
+plot(t,qx(:,1))
+legend('phi_x',Location='southeast')
+ylabel('Angle (rad)')
+grid
+
+subplot(3,3,5)
+plot(t,qy(:,1))
+legend('phi_y',Location='southeast')
+ylabel('Angle (rad)')
+grid
+
+subplot(3,3,7)
+plot(t,qx(:,3),t,qx(:,4))
+ylabel('Angle rate (rad/s)')
+legend('dotphi x','dottheta x')
+grid
+
+subplot(3,3,8)
+plot(t,qy(:,3),t,qy(:,4))
+ylabel('Angle rate (rad/s)')
+legend('dotphi y','dottheta y')
+grid
+
+subplot(3,3,6)
+plot(t,qz(:,2))
+ylabel('Angle rate (rad/s)')
+legend('dottheta z')
+grid
