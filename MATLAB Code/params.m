@@ -14,7 +14,7 @@ p = struct(...
 
 % VARIABLE properties %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %_______Masses_______
-p.m_ball = 229;   %kg, Mass of the Ball
+p.m_ball = 2.29;   %kg, Mass of the Ball
 p.m_body = 9.2;    %kg, Mass of the body
 p.m_omni = 4; %kg, reverse engineered from inertia given
 
@@ -32,7 +32,8 @@ p.beta = deg2rad(0); %rad, taken from +X axis (adds intervals for other location
 
 %_______Misc_______
 p.g = 9.81;     % m/s^2, Gravitational acceleration
-p.i_Gear = 26;  % -, Gear ratio
+p.i_Gear = 26.8;  % -, Gear ratio from most recent motor (57BYA74-24-01-PG27)
+p.K_T = 0.04813; %Nm/A, motor torque constant from """""
 
 %_______Inertia Constants_______
 p.Theta_motor_rotor = 3.33 * 10^-6; % rotor intertia (real small)

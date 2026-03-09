@@ -10,11 +10,11 @@ K_xy = get_gains_LQR_xy;
 
 % Simulation
 % Initial condition
-T_max = 6.9;      % Maximum Motor Torque
+T_max = 2.3;      % Maximum Motor Torque from "Napkin Math"
 ic_xz = [0; deg2rad(10); 0; 0];  % initial condition
 ic_yz = [0; deg2rad(10); 0; 0];
 ic_xy = [0; 0];
-T_sim = 3; % s
+T_sim = 10; % s
 
 % Nonlinear
 for (i = [1,2])
@@ -46,6 +46,9 @@ for (i = [1,2])
     w1 = simout.logsout.get("psidot_omni_1").Values.Data;
     w2 = simout.logsout.get("psidot_omni_2").Values.Data;
     w3 = simout.logsout.get("psidot_omni_3").Values.Data;
+    i1 = T1/(params().K_T * params().i_Gear);
+    i2 = T2/(params().K_T * params().i_Gear);
+    i3 = T3/(params().K_T * params().i_Gear);
     
     t = simout.get('tout');
     
@@ -104,19 +107,28 @@ for (i = [1,2])
     legend('dottheta z')
     grid
     
-    figure
+    figure % Torque and velocity and current responses
     sgtitle(graph_title(i));
-    subplot(2,1,1)
+    subplot(3,1,1)
     plot(t,T1,t,T2,'g',t,T3,'r--')
-    legend('T1','T2','T3')
+    legend('T_1','T_2','T_3')
     xlabel('Time (s)')
     ylabel('Motor Torque (Nm)')
     title('Motor spec');
     grid
+
+    subplot(3, 1, 2)
+    plot(t, i1, t, i2, 'g', t, i3, 'r--')
+    legend('I_1', 'I_2', 'I_3');
+    xlabel('Time (s)')
+    ylabel('Current (A)');
+    title('Current Response')
+    grid
+
     
-    subplot(2,1,2)
+    subplot(3,1,3)
     plot(t,w1,t,w2,'g',t,w3,'r--')
-    legend('omega 1','omega 2','omega 3')
+    legend('\omega_1','\omega_2','\omega_3')
     xlabel('Time (s)')
     ylabel('Motor speed (rpm)')
     grid
