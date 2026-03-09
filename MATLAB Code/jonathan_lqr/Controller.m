@@ -51,8 +51,25 @@ for (i = [1,2])
     i3 = T3/(params().K_T * params().i_Gear);
     
     t = simout.get('tout');
+
+    % Current analysis
+    thresh = [1, 2]; % seconds. We don't care about *all* values
+    range1 = i1(t < thresh(i));
+    range2 = i2(t < thresh(i));
+    range3 = i3(t < thresh(i));
     
+    avg1 = mean(abs(range1));
+    avg2 = mean(abs(range2));
+    avg3 = mean(abs(range3));
     
+    disp("___Current Results: " + graph_title(i) + "___")
+    fprintf("Abs Avg 1: %f (A)\n", avg1)
+    fprintf("Abs Avg 2: %f (A)\n", avg2)
+    fprintf("Abs Avg 3: %f (A)\n", avg3)
+    fprintf("Abs Sum: %f (A)\n", abs(avg1)+abs(avg2)+abs(avg3))
+
+    
+    %________________________PLOTS________________________
     % figure('Name', 'Original', 'NumberTitle', 'off')
     figure
     sgtitle(graph_title(i));
@@ -221,3 +238,6 @@ plot(t,qz(:,2))
 ylabel('Angle rate (rad/s)')
 legend('dottheta z')
 grid
+
+
+
