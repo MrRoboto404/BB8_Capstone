@@ -4,9 +4,9 @@ close all;
 [A,B,C,D] = get_linearized_matrices_vertical(params());
 K_vert = get_gains_LQR_vertical(1);
 C = [1, 0, 0, 0;
+     0, 1, 0, 0;
      0, 0, 0, 0;
-     0, 0, 1, 0;
-     0, 0, 0, 0];
+     0, 0, 0, 1];
 % C2 = [1 0 1 0];
 % D2 = zeros(size(C2,1),size(B,2));
 % ctrb() and obsv()
@@ -15,7 +15,7 @@ observe = rank(obsv(A,C))
 %%
 % Kalman Filter
 Vd = .001 * eye(4);
-Vn = .1;
+Vn = diag([0.1 0.01 0.001 0.000001]);
 
 % [L,P,E] = lqe(A,Vd,C,Vd,Vn);
 Kf = (lqr(A',C',Vd,Vn))';
