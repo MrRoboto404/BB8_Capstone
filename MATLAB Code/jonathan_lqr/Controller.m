@@ -10,7 +10,7 @@ K_xy = get_gains_LQR_xy;
 
 % Simulation
 % Initial condition
-T_max = 2.3;      % Maximum Motor Torque from "Napkin Math"
+T_max = 10;      % Maximum Motor Torque from "Napkin Math"
 ic_xz = [0; deg2rad(10); 0; 0];  % initial condition
 ic_yz = [0; deg2rad(10); 0; 0];
 ic_xy = [0; 0];
@@ -49,24 +49,17 @@ for (i = [1,2])
     i1 = T1/(params().K_T * params().i_Gear);
     i2 = T2/(params().K_T * params().i_Gear);
     i3 = T3/(params().K_T * params().i_Gear);
+    q1 = trapz(i1); % in Amp-seconds
+    q2 = trapz(i2); % in Amp-seconds
+    q3 = trapz(i3); % in Amp-seconds
+    qtotal = abs(q1) + abs(q2) + abs(q3); % in Amp-seconds
     
     t = simout.get('tout');
 
     % Current analysis
-    thresh = [1, 2]; % seconds. We don't care about *all* values
-    range1 = i1(t < thresh(i));
-    range2 = i2(t < thresh(i));
-    range3 = i3(t < thresh(i));
-    
-    avg1 = mean(abs(range1));
-    avg2 = mean(abs(range2));
-    avg3 = mean(abs(range3));
     
     disp("___Current Results: " + graph_title(i) + "___")
-    fprintf("Abs Avg 1: %f (A)\n", avg1)
-    fprintf("Abs Avg 2: %f (A)\n", avg2)
-    fprintf("Abs Avg 3: %f (A)\n", avg3)
-    fprintf("Abs Sum: %f (A)\n", abs(avg1)+abs(avg2)+abs(avg3))
+    fprintf("Total Charge Used: %f (A*h)\n", qtotal/3600)
 
     
     %________________________PLOTS________________________
