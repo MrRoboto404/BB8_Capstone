@@ -3,14 +3,14 @@ close all;
 
 % This script is the second attempt to implement LQR control for all 3 planes %%
 
-K_vert = get_gains_LQR_vertical(1);
+K_vert = get_gains_LQR_vertical(0);
 K_xy = get_gains_LQR_xy;
 % Initial conditions
 %  [\phi, \theta, \dot{\phi}, \dot{\theta}]
 
 % Simulation
 % Initial condition
-T_max = 10;      % Maximum Motor Torque from "Napkin Math"
+T_max = 6.9;      % Maximum Motor Torque from "Napkin Math"
 ic_xz = [0; deg2rad(10); 0; 0];  % initial condition
 ic_yz = [0; deg2rad(10); 0; 0];
 ic_xy = [0; 0];
