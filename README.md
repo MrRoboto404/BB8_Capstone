@@ -1,7 +1,13 @@
 # Welcome to BB8!
 This is the GitHub for the BallBot team for the 2026 Mechatronics program.
 
-Evil BB8
+Contributors are:
+Martin Johnson | Mechanical Design
+Dante Rieger | IMU communication
+Jonathan Pham | Control design
+Ryan Stokes | Electrical design and motor control
+Benedict Chandra | IMU Filter design
 
-![BB-8 Shielded Roll](https://static.wikia.nocookie.net/battlefront/images/2/2c/Boost_Card_BB-8_-_Shielded_Roll.png/revision/latest?cb=20200203221159)
+BB8 is proud of us guys.
+![approval](bb8_approves.jpg)
 Note that this repo is public now for tracking stuff.
