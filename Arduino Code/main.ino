@@ -37,22 +37,23 @@ IntervalTimer myTimer;
 int imu_timer_freq = 160; //hz
 int imu_period = 1000000/imu_timer_freq; //convert to seconds, rounds to floor of quintent, us
 
+// ======= Complementary filter =======
+const float wb  = 1.1;
+const float tau = 1.0 / wb;
+const float dt  = 1.0 / 160;
+const int CALIB_SAMPLES = 10000; // gyro bias calibration samples
+
+const float ACCEL_SCALE = 0.061e-3 * 9.81;  // ±2g: 0.061 mg/LSB
+const float GYRO_SCALE  = 17.5e-3 * PI/180; // ±500 dps
+
+float pitch_filtered = 0.0;
+float roll_filtered  = 0.0;
+float gx_bias = 0.0;
+float gy_bias = 0.0;
+bool filter_initialized = false;
 
 void setup() {
   Serial.begin(9600);
-  /*_________________________CAN/MOTORS_______________________*/
-  Can0.begin();
-  Can0.setBaudRate(250000);
-
-  // clear any possible errors
-  clear_errors(MOTOR_1);
-  clear_errors(MOTOR_2);
-  clear_errors(MOTOR_3);
-
-  // Upon recieving a message, sniff
-  // NOTE: mailboxes used are default and not set up manually
-  Can0.onReceive(can_sniff);
-
   /*____________________________SPI/IMU____________________________*/
   SPI.begin();
 
@@ -89,7 +90,33 @@ void setup() {
 	myISM.setGyroDataRate(ISM_GY_ODR_208Hz);
 	myISM.setGyroFullScale(ISM_500dps);
 
+  /*____________________________IMU CALIBRATION____________________________*/
+  // Keep IMU perfectly still during this period
+  Serial.println("Calibrating gyro bias...");
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    myISM.getGyro(&gyroData);
+    gx_bias += gyroData.xData * GYRO_SCALE;
+    gy_bias += gyroData.yData * GYRO_SCALE;
+    delay(2);
+  }
+  gx_bias /= CALIB_SAMPLES;
+  gy_bias /= CALIB_SAMPLES;
+  Serial.println("Calibration complete");
+
   myTimer.begin(IMU_ISR, imu_period);
+
+  /*_________________________CAN/MOTORS_______________________*/
+  Can0.begin();
+  Can0.setBaudRate(250000);
+
+  // clear any possible errors
+  clear_errors(MOTOR_1);
+  clear_errors(MOTOR_2);
+  clear_errors(MOTOR_3);
+
+  // Upon recieving a message, sniff
+  // NOTE: mailboxes used are default and not set up manually
+  Can0.onReceive(can_sniff);
 
 }
 
@@ -120,24 +147,30 @@ void IMU_ISR(){
   myISM.getAccel(&accelData);
   myISM.getGyro(&gyroData);
 
-  /* 
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  FILTER GOES HERE
-  */
+  // Scale to physical units
+  float ax = accelData.xData * ACCEL_SCALE;
+  float ay = accelData.yData * ACCEL_SCALE;
+  float az = accelData.zData * ACCEL_SCALE;
+
+  float gx = gyroData.xData * GYRO_SCALE - gx_bias;
+  float gy = gyroData.yData * GYRO_SCALE - gy_bias;
+
+  // Accelerometer angle estimates (radians)
+  float accel_roll_raw  = atan2(ay, sqrt(ax*ax + az*az));
+  float accel_pitch_raw = atan2(-ax, sqrt(ay*ay + az*az));
+
+  // Initialize filter on first run
+  if (!filter_initialized) {
+    roll_filtered  = accel_roll_raw;
+    pitch_filtered = accel_pitch_raw;
+    filter_initialized = true;
+    return;
+  }
+
+  // Complementary filter
+  float alpha    = tau / (tau + dt);
+  roll_filtered  = alpha * (roll_filtered  + gx * dt) + (1.0 - alpha) * accel_roll_raw;
+  pitch_filtered = alpha * (pitch_filtered + gy * dt) + (1.0 - alpha) * accel_pitch_raw;
 }
 
 /*  
