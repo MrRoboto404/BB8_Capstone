@@ -4,7 +4,7 @@
 
 
 //========================GLOBAL STUFF========================
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can0;
 
 //______Constants______
 // CAN IDs correctly bit-shifted
@@ -27,8 +27,8 @@ float m3_true_torque;
 float m1_true_vel;
 float m2_true_vel;
 float m3_true_vel;
-int runcount = 1;
-int runs_total = 2;
+int runcount = 0;
+int runs_total = 1;
 
 //========================DEFINITIONS========================
 // Setup of communication, serial port, and CAN
@@ -44,7 +44,7 @@ void setup() {
     Can0.onReceive(can_sniff);
 
     // set absolute position to 0
-    reset_positions();
+    //reset_positions();
 
     // Activate motors for input
     ready_motors();
@@ -55,6 +55,7 @@ void setup() {
 // main loop
 void loop() {
     Can0.events();
+    
     if (runcount < runs_total){
         // Benchtesting
         Serial.println("Beginning Testing in");
@@ -80,14 +81,14 @@ void loop() {
         delay(1000);
 
         Serial.println("Done sending");
-        if (runcount >= runs_total){
+        if (runcount == (runs_total - 1)){
             Serial.println("DONE WITH ALL LOOPS");
         }
 
         runcount++;
         delay(1000);
-
     }
+    
 }
 
 /*  Function:    print_CAN_frame
@@ -143,7 +144,7 @@ void ready_motors(void){
     // Motor 1
     CAN_message_t msg;
     msg.id = MOTOR_1 | READY_MOTOR;
-    msg.len = 1;
+    msg.len = 4;
     int axis_state = 8;
     memcpy(msg.buf, &axis_state, 4);
     if (Can0.write(msg)) {
@@ -152,29 +153,79 @@ void ready_motors(void){
     else {
         Serial.println("CAN ready send failed: M1");
     }
+    delay(10);
 
     // Motor 2
     msg.id = MOTOR_2 | READY_MOTOR;
+    msg.len = 4;
     if (Can0.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
         Serial.println("CAN ready send failed: M2");
     }
+    delay(10);
 
     // Motor 3
     msg.id = MOTOR_3 | READY_MOTOR;
+    msg.len = 4;
     if (Can0.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
         Serial.println("CAN ready send failed: M3");
     }
-
-
-
-
+    delay(10);
 }
+
+
+/*  Function:    ready_motors
+    Behavior:    Aids in initialization. Changes the state of all drivers to "ready" (flashing green) instead of "idle" (blue)
+    Arguments:   None
+    Returns:     None
+    Errors:      None
+*/
+void idle_motors(void){
+    // set axis state. 1 = idle, 8 = ready
+
+    // Motor 1
+    CAN_message_t msg;
+    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.len = 1; // one byte
+    int32_t axis_state = 1;
+    memcpy(msg.buf, &axis_state, 1); // copy one byte
+    if (Can0.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M1");
+    }
+    delay(10);
+
+    // Motor 2
+    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.len = 1;
+    if (Can0.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M2");
+    }
+    delay(10);
+
+    // Motor 3
+    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.len = 1;
+    if (Can0.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M3");
+    }
+    delay(10);
+}
+
+
 
 /*  Function:    reset_positions
     Behavior:    Aids in initialization. Makes all positions of the motors = 0
