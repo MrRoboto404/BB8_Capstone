@@ -4,7 +4,8 @@
 
 
 //========================GLOBAL STUFF========================
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can0;
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
+const CAN_message_t incoming_message;
 
 //______Constants______
 // CAN IDs correctly bit-shifted
@@ -33,18 +34,19 @@ int runs_total = 1;
 //========================DEFINITIONS========================
 // Setup of communication, serial port, and CAN
 void setup() {
+    delay(1000);
     Serial.begin(115200); // serial monitor
     Serial.println("------------Beginning Setup------------");
 
-    Can0.begin();
-    Can0.setBaudRate(250000);
+    Can2.begin();
+    Can2.setBaudRate(250000);
 
     // Upon recieving a message, sniff
     // NOTE: mailboxes used are default and not set up manually
-    Can0.onReceive(can_sniff);
+    Can2.onReceive(can_sniff);
 
     // set absolute position to 0
-    //reset_positions();
+    reset_positions();
 
     // Activate motors for input
     ready_motors();
@@ -54,7 +56,7 @@ void setup() {
 
 // main loop
 void loop() {
-    Can0.events();
+    Can2.events();
     
     if (runcount < runs_total){
         // Benchtesting
@@ -83,6 +85,7 @@ void loop() {
         Serial.println("Done sending");
         if (runcount == (runs_total - 1)){
             Serial.println("DONE WITH ALL LOOPS");
+            idle_motors();
         }
 
         runcount++;
@@ -124,7 +127,7 @@ void send_torque(int MOTOR, float torque){
     msg.len = 4;
     memcpy(msg.buf, &torque, 4);
 
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -147,7 +150,7 @@ void ready_motors(void){
     msg.len = 4;
     int axis_state = 8;
     memcpy(msg.buf, &axis_state, 4);
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -158,7 +161,7 @@ void ready_motors(void){
     // Motor 2
     msg.id = MOTOR_2 | READY_MOTOR;
     msg.len = 4;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -169,7 +172,7 @@ void ready_motors(void){
     // Motor 3
     msg.id = MOTOR_3 | READY_MOTOR;
     msg.len = 4;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -194,7 +197,7 @@ void idle_motors(void){
     msg.len = 1; // one byte
     int32_t axis_state = 1;
     memcpy(msg.buf, &axis_state, 1); // copy one byte
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -205,7 +208,7 @@ void idle_motors(void){
     // Motor 2
     msg.id = MOTOR_2 | READY_MOTOR;
     msg.len = 1;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -216,7 +219,7 @@ void idle_motors(void){
     // Motor 3
     msg.id = MOTOR_3 | READY_MOTOR;
     msg.len = 1;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -241,7 +244,7 @@ void reset_positions(void){
     msg.id = MOTOR_1 | SET_ABS_POS;
     msg.len = 4;
     memcpy(msg.buf, &set_zero, 4);
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -250,7 +253,7 @@ void reset_positions(void){
 
     // Motor 2
     msg.id = MOTOR_2 | SET_ABS_POS;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
@@ -259,7 +262,7 @@ void reset_positions(void){
 
     // Motor 3
     msg.id = MOTOR_3 | SET_ABS_POS;
-    if (Can0.write(msg)) {
+    if (Can2.write(msg)) {
         print_CAN_frame(msg);
     } 
     else {
