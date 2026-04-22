@@ -42,7 +42,7 @@ void setup() {
 
     // Set up mailboxes
     //Can2.enableMBInterrupts(); // enables all mailboxes to be interrupt enabled
-    Serial.println("Mailbox Statuses:"); Serial.prinln("");
+    Serial.println("Mailbox Statuses:"); Serial.println("");
     Can2.mailboxStatus(); // show how the mailboxes are currently configured
 
     // Upon recieving a message, sniff

@@ -28,14 +28,13 @@ float m2_true_vel;
 float m3_true_vel;
 
 int runcount = 0;
-int runs_total = 1;
-int frequency = 2; // Hz
+int t_total = 10;
+float frequency = 0.9; // Hz, cannot exceed 0.9
 float peak_torque = 0.1; // N*m, don't change
+int flag = 1;
 
 int sleep_time = 1000 / frequency;
 
-//______Constants______
-const double PI = 3.14159265358979323846;
 
 //========================DEFINITIONS========================
 // Setup of communication, serial port, and CAN
@@ -66,18 +65,44 @@ void setup() {
 // main loop
 void loop() {
     Can2.events();
-    
-    if (runcount < runs_total){
-        static unsigned long start_time = millis();
-        float t = (millis() - start_time) / 1000.0;
-
+    static unsigned long start_time = millis();
+    float t = (millis() - start_time) / 1000.0;
+    if (t < t_total){
         float cmd = peak_torque * sin(2 * PI * frequency * t);
 
-        send_torque(MOTOR_2, cmd);
+        //Serial.println(cmd);
 
-        delay(sleep_time);
+        send_torque(MOTOR_3, cmd);
+
+        delay(1);
+    }
+    if ((t > t_total) && (flag == 1)){
+        send_torque(MOTOR_3, 0);
+        idle_motors();
+        Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
+        flag = 0;
     }
     
+    
+}
+
+/*  Function:    print_CAN_frame
+    Behavior:    Prints to the serial the message ID and data sent over CAN (debugging)
+    Arguments:   CAN_message_t msg  - CAN message being sent
+    Returns:     None
+    Errors:      None
+*/
+void print_CAN_frame(CAN_message_t msg){
+    char serial_buffer[100];
+        sprintf(serial_buffer, "ID: 0x%03X  Data:", msg.id);
+
+        Serial.print(serial_buffer);
+        for (int i = 0; i < msg.len; i++) {
+            Serial.print(" 0x");
+            if (msg.buf[i] < 0x10) Serial.print("0"); // leading zero
+            Serial.print(msg.buf[i], HEX);
+        }
+        Serial.println();
 }
 
 
@@ -95,7 +120,7 @@ void send_torque(int MOTOR, float torque){
     memcpy(msg.buf, &torque, 4);
 
     if (Can2.write(msg)) {
-        print_CAN_frame(msg);
+        //print_CAN_frame(msg);
     } 
     else {
         Serial.println("CAN torque send failed");
@@ -149,6 +174,54 @@ void ready_motors(void){
 }
 
 
+/*  Function:    ready_motors
+    Behavior:    Aids in initialization. Changes the state of all drivers to "ready" (flashing green) instead of "idle" (blue)
+    Arguments:   None
+    Returns:     None
+    Errors:      None
+*/
+void idle_motors(void){
+    // set axis state. 1 = idle, 8 = ready
+
+    // Motor 1
+    CAN_message_t msg;
+    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.len = 1; // one byte
+    int32_t axis_state = 1;
+    memcpy(msg.buf, &axis_state, 1); // copy one byte
+    if (Can2.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M1");
+    }
+    delay(10);
+
+    // Motor 2
+    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.len = 1;
+    if (Can2.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M2");
+    }
+    delay(10);
+
+    // Motor 3
+    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.len = 1;
+    if (Can2.write(msg)) {
+        print_CAN_frame(msg);
+    } 
+    else {
+        Serial.println("CAN ready send failed: M3");
+    }
+    delay(10);
+}
+
+
+
 /*  Function:    reset_positions
     Behavior:    Aids in initialization. Makes all positions of the motors = 0
     Arguments:   None
@@ -187,4 +260,58 @@ void reset_positions(void){
     else {
         Serial.println("CAN pos reset send failed: M3");
     }
+}
+
+
+/*  Function:   can_sniff
+    Behavior:   Processes CAN frames sent by a node to the teensy
+    Arguments:  CAN_message_t &msg  - the address of the incoming message
+    Returns:    None
+    Errors:     Not yet implemented 
+*/
+void can_sniff(const CAN_message_t &msg) { // global declaration
+    /*
+    ODRIVE CAN FRAME ID (11 bits)
+    10  9  8  7  6  5 |  4  3  2  1  0
+          msg ID           cmd_id 
+    */
+    float pos, vel, torq;
+    uint8_t node = msg.id >> 5; // shift over to find the node/origin
+    uint8_t cmd  = msg.id & 0x1F; // only look at the cmd_id region by setting those to 1 and the rest 0, then &
+    Serial.println(node);
+    Serial.println(cmd);
+    if (cmd == GET_ENCODER){
+        // Extract data
+        memcpy(&pos, msg.buf, 4);
+        memcpy(&vel, msg.buf + 4, 4);
+
+        // Assign data
+        if(node == 1) m1_true_vel = vel;
+        if(node == 2) m2_true_vel = vel;
+        if(node == 3) m3_true_vel = vel;
+
+        // FOR PRINTING ONLY
+        char serial_buffer[50];
+        sprintf(serial_buffer, "Motor %d   Pos: %f   Vel %f", node, pos, vel);
+        Serial.println(serial_buffer);
+
+    }
+    // Torque data: disabled. should only be enabled while collecting data for plotting (not needed for control loop)
+    /*
+    if (cmd == GET_TORQUE){
+        // Extract data
+        memcpy(&torq, msg.buf, 4);
+
+        // Assign data
+        if(node == 1) m1_true_torque = torq;
+        if(node == 2) m2_true_torque = torq;
+        if(node == 3) m3_true_torque = torq;
+
+        // FOR PRINTING ONLY
+        char serial_buffer = [50];
+        sprintf(serial_buffer, "Motor %d   Torque: %f", node, torq);
+        Serial.println(serial_buffer);
+    }
+    */
+    
 }
