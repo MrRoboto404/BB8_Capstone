@@ -5,7 +5,6 @@
 
 //========================GLOBAL STUFF========================
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
-const CAN_message_t incoming_message;
 
 //______Constants______
 // CAN IDs correctly bit-shifted
@@ -41,9 +40,13 @@ void setup() {
     Can2.begin();
     Can2.setBaudRate(250000);
 
+    // Set up mailboxes
+    //Can2.enableMBInterrupts(); // enables all mailboxes to be interrupt enabled
+    Serial.println("Mailbox Statuses:"); Serial.prinln("");
+    Can2.mailboxStatus(); // show how the mailboxes are currently configured
+
     // Upon recieving a message, sniff
-    // NOTE: mailboxes used are default and not set up manually
-    Can2.onReceive(can_sniff);
+    Can2.onReceive(can_sniff); // allows all FIFO/message box messages to be received in the supplied callback.
 
     // set absolute position to 0
     reset_positions();
@@ -277,7 +280,7 @@ void reset_positions(void){
     Returns:    None
     Errors:     Not yet implemented 
 */
-void can_sniff(const CAN_message_t &msg) {
+void can_sniff(const CAN_message_t &msg) { // global declaration
     /*
     ODRIVE CAN FRAME ID (11 bits)
     10  9  8  7  6  5 |  4  3  2  1  0
