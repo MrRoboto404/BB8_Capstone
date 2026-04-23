@@ -17,7 +17,7 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define GET_TORQUE (0x01C)
 #define CLEAR_ERROR (0x018)
 #define E_STOP (0x02)
-#define READY_MOTOR (0x07)
+#define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 
 //______Global Variables______
@@ -195,7 +195,7 @@ void ready_motors(void){
 
     // Motor 1
     CAN_message_t msg;
-    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 4;
     int axis_state = 8;
     memcpy(msg.buf, &axis_state, 4);
@@ -208,7 +208,7 @@ void ready_motors(void){
     delay(10);
 
     // Motor 2
-    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.id = MOTOR_2 | MOTOR_STATE;
     msg.len = 4;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -219,7 +219,7 @@ void ready_motors(void){
     delay(10);
 
     // Motor 3
-    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.id = MOTOR_3 | MOTOR_STATE;
     msg.len = 4;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -242,7 +242,7 @@ void idle_motors(void){
 
     // Motor 1
     CAN_message_t msg;
-    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 1; // one byte
     int32_t axis_state = 1;
     memcpy(msg.buf, &axis_state, 1); // copy one byte
@@ -255,7 +255,7 @@ void idle_motors(void){
     delay(10);
 
     // Motor 2
-    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.id = MOTOR_2 | MOTOR_STATE;
     msg.len = 1;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -266,7 +266,7 @@ void idle_motors(void){
     delay(10);
 
     // Motor 3
-    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.id = MOTOR_3 | MOTOR_STATE;
     msg.len = 1;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);

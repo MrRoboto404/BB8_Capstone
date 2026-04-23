@@ -17,7 +17,7 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define GET_TORQUE (0x01C)
 #define CLEAR_ERROR (0x018)
 #define E_STOP (0x02)
-#define READY_MOTOR (0x07)
+#define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 
 //______Global Variables______
@@ -27,9 +27,8 @@ float m3_true_torque;
 float m1_true_vel;
 float m2_true_vel;
 float m3_true_vel;
-
-int loop_num = 0;
-int loop_total = 1000;
+int runcount = 0;
+int runs_total = 1;
 
 //========================DEFINITIONS========================
 // Setup of communication, serial port, and CAN
@@ -47,7 +46,7 @@ void setup() {
     Can2.mailboxStatus(); // show how the mailboxes are currently configured
 
     // Upon recieving a message, sniff
-    Can2.enableMBInterrupts();
+    Can2.enableMBInterrupts(); // enable interrupts
     Can2.onReceive(can_sniff); // allows all FIFO/message box messages to be received in the supplied callback.
 
     // set absolute position to 0
@@ -57,20 +56,13 @@ void setup() {
     ready_motors();
 
     Serial.println("------------Completed Setup.------------");
-    Serial.println("Listening...");
+    Serial.println("Listening...")
 }
 
 // main loop
 void loop() {
-    if (loop_num < loop_total){
-        Can2.events();
-        loop_num++;
-    }
-    if (loop_num == loop_total){
-        idle_motors();
-        Serial.println("~~~~~~Done with test~~~~~~");
-        loop_num++;
-    }
+    Can2.events();
+    
 }
 
 /*  Function:    print_CAN_frame
@@ -125,7 +117,7 @@ void ready_motors(void){
 
     // Motor 1
     CAN_message_t msg;
-    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 4;
     int axis_state = 8;
     memcpy(msg.buf, &axis_state, 4);
@@ -138,7 +130,7 @@ void ready_motors(void){
     delay(10);
 
     // Motor 2
-    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.id = MOTOR_2 | MOTOR_STATE;
     msg.len = 4;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -149,7 +141,7 @@ void ready_motors(void){
     delay(10);
 
     // Motor 3
-    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.id = MOTOR_3 | MOTOR_STATE;
     msg.len = 4;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -172,7 +164,7 @@ void idle_motors(void){
 
     // Motor 1
     CAN_message_t msg;
-    msg.id = MOTOR_1 | READY_MOTOR;
+    msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 1; // one byte
     int32_t axis_state = 1;
     memcpy(msg.buf, &axis_state, 1); // copy one byte
@@ -185,7 +177,7 @@ void idle_motors(void){
     delay(10);
 
     // Motor 2
-    msg.id = MOTOR_2 | READY_MOTOR;
+    msg.id = MOTOR_2 | MOTOR_STATE;
     msg.len = 1;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -196,7 +188,7 @@ void idle_motors(void){
     delay(10);
 
     // Motor 3
-    msg.id = MOTOR_3 | READY_MOTOR;
+    msg.id = MOTOR_3 | MOTOR_STATE;
     msg.len = 1;
     if (Can2.write(msg)) {
         print_CAN_frame(msg);
@@ -265,6 +257,7 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
     float pos, vel, torq;
     uint8_t node = msg.id >> 5; // shift over to find the node/origin
     uint8_t cmd  = msg.id & 0x1F; // only look at the cmd_id region by setting those to 1 and the rest 0, then &
+
     if (cmd == GET_ENCODER){
         // Extract data
         memcpy(&pos, msg.buf, 4);
