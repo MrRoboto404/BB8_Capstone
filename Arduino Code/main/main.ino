@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
+#include <Bounce2.h>
 
 
 
@@ -28,7 +29,10 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 
+#define SWITCH_PIN 14
+
 //------Global Variables------
+//____________CAN____________
 //float m1_true_torque; DISABLED, only needed for data collection
 //float m2_true_torque;
 //float m3_true_torque;
@@ -65,7 +69,9 @@ float gx_bias = 0.0;
 float gy_bias = 0.0;
 bool filter_initialized = false;
 
-
+//____________Switches____________
+Bounce debouncer = Bounce();
+bool control_run = false; // false by default
 
 
 
@@ -150,6 +156,10 @@ void setup() {
   axis_state = 8; // ready
   set_motors_states(axis_state); // change from idle -> ready (flashing green)
 
+  /*_________________________SWITCHES_______________________*/
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
+  debouncer.attach(SWITCH_PIN);
+  debouncer.interval(25); // debounce time, in ms
 
 
   /*_________________________ACK SETUP_______________________*/
@@ -169,18 +179,26 @@ void loop() {
   so that way values are not changing halfway through calculations
   */
 
-  /* Future plan: have a physical switch to turn on/off control logic
-  This will look like an if statement (if switch == true.....) 
-  */
 
-  // vvvvv MUST be reached, otherwise no messages get recieved/transmitted
-  Can2.events();
-  // Note: motor velocities are global variables
+  // Detect if control switch has been flicked
+  debouncer.update();
+  if (debouncer.changed()) {
+    // INPUT_PULLUP: LOW = pressed
+    control_run = (debouncer.read() == LOW);
+  }
 
 
+  //______Main Loopable stuff______
+  if (control_run){
+    // controller code goes here
+    Can2.events();
 
-  // When done with whatever loop, safely exit via the command below
-  // cleanup();
+    // note: motor velocities are global vars
+  }
+  else if (!control_run){
+    Serial.println("Control Switch is OFF");
+  }
+
 }
 
 /**
