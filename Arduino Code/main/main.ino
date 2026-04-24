@@ -5,6 +5,7 @@
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
 #include <Bounce2.h>
+#include "Filter.h"
 
 
 
@@ -42,7 +43,7 @@ float m3_true_vel;
 int axis_state = 1; // default to idle
 
 
-//____________IMU Setup____________
+//____________IMU ____________
 // byte mag_CS = 9;
 byte ism_CS = 10;
 
@@ -54,7 +55,7 @@ IntervalTimer myTimer;
 int imu_timer_freq = 160; //hz
 int imu_period = 1000000/imu_timer_freq; //convert to seconds, rounds to floor of quintent, us
 
-//____________IMU Filter Setup____________
+//____________IMU Filter ____________
 const float wb  = 1.1;
 const float tau = 1.0 / wb;
 const float dt  = 1.0 / 160;
@@ -129,15 +130,9 @@ void setup() {
 
   /*____________________________IMU CALIBRATION____________________________*/
   // Keep IMU perfectly still during this period
-  Serial.println("Calibrating gyro bias...");
-  for (int i = 0; i < CALIB_SAMPLES; i++) {
-    myISM.getGyro(&gyroData);
-    gx_bias += gyroData.xData * GYRO_SCALE;
-    gy_bias += gyroData.yData * GYRO_SCALE;
-    delay(2);
-  }
-  gx_bias /= CALIB_SAMPLES;
-  gy_bias /= CALIB_SAMPLES;
+  imu_filter.begin();
+  Serial.println("Calibrating gyro bias, keep IMU still...");
+  imu_filter.calibrateGyroBias(readGyroSample, 10000);
   Serial.println("Calibration complete");
 
   myTimer.begin(IMU_ISR, imu_period);
@@ -179,6 +174,23 @@ void loop() {
   so that way values are not changing halfway through calculations
   */
 
+  // Update Madgwick filter when ISR has ticked
+  if (imu_ready) {
+    imu_ready = false;
+
+    myISM.getAccel(&accelData);
+    myISM.getGyro(&gyroData);
+
+    float ax = accelData.xData * ACCEL_SCALE;
+    float ay = accelData.yData * ACCEL_SCALE;
+    float az = accelData.zData * ACCEL_SCALE;
+    float gx = gyroData.xData * GYRO_SCALE;
+    float gy = gyroData.yData * GYRO_SCALE;
+    float gz = gyroData.zData * GYRO_SCALE;
+
+    imu_filter.update(gx, gy, gz, ax, ay, az);
+  }
+	
 
   // Detect if control switch has been flicked
   debouncer.update();
@@ -227,28 +239,8 @@ Returns: none
 Arguments: none
 */
 void IMU_ISR(){
-  myISM.getAccel(&accelData);
-  myISM.getGyro(&gyroData);
-
-  // Scale to physical units
-  float ax = accelData.xData * ACCEL_SCALE;
-  float ay = accelData.yData * ACCEL_SCALE;
-  float az = accelData.zData * ACCEL_SCALE;
-
-  float gx = gyroData.xData * GYRO_SCALE - gx_bias;
-  float gy = gyroData.yData * GYRO_SCALE - gy_bias;
-
-  // Accelerometer angle estimates (radians)
-  float accel_roll_raw  = atan2(ay, sqrt(ax*ax + az*az));
-  float accel_pitch_raw = atan2(-ax, sqrt(ay*ay + az*az));
-
-  // Initialize filter on first run
-  if (!filter_initialized) {
-    roll_filtered  = accel_roll_raw;
-    pitch_filtered = accel_pitch_raw;
-    filter_initialized = true;
-    return;
-  }
+  imu_ready = true;
+}
 
   // Complementary filter
   float alpha    = tau / (tau + dt);
