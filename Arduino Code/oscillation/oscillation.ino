@@ -20,15 +20,15 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define SET_ABS_POS (0x19)
 
 //______Global Variables______
-float m1_true_torque;
-float m2_true_torque;
-float m3_true_torque;
 float m1_true_vel;
 float m2_true_vel;
 float m3_true_vel;
+float m1_true_pos;
+float m2_true_pos;
+float m3_true_pos;
 
 int runcount = 0;
-int t_total = 10;
+int t_total = 20;
 float frequency = 0.9; // Hz, cannot exceed 0.9
 float peak_torque = 0.1; // N*m, don't change
 int flag = 1;
@@ -43,8 +43,14 @@ void setup() {
     Serial.begin(115200); // serial monitor
     Serial.println("------------Beginning Setup------------");
 
+    // Start CAN bus
     Can2.begin();
     Can2.setBaudRate(250000);
+
+    // Enable reading the CAN bus
+    // Upon recieving a message, sniff
+    Can2.enableMBInterrupts(); // enable interrupts
+    Can2.onReceive(can_sniff); // allows all FIFO/message box messages to be received in the supplied callback.
 
     // set absolute position to 0
     reset_positions();
@@ -72,12 +78,18 @@ void loop() {
 
         //Serial.println(cmd);
 
-        send_torque(MOTOR_3, cmd);
+        send_torque(MOTOR_2, cmd);
+
+        Serial.print("Pos:");
+        Serial.print(m2_true_pos);
+        Serial.print(",");
+        Serial.print("Vel:");
+        Serial.println(m2_true_vel);
 
         delay(1);
     }
     if ((t > t_total) && (flag == 1)){
-        send_torque(MOTOR_3, 0);
+        send_torque(MOTOR_2, 0);
         idle_motors();
         Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
         flag = 0;
@@ -278,40 +290,23 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
     float pos, vel, torq;
     uint8_t node = msg.id >> 5; // shift over to find the node/origin
     uint8_t cmd  = msg.id & 0x1F; // only look at the cmd_id region by setting those to 1 and the rest 0, then &
-    Serial.println(node);
-    Serial.println(cmd);
     if (cmd == GET_ENCODER){
         // Extract data
         memcpy(&pos, msg.buf, 4);
         memcpy(&vel, msg.buf + 4, 4);
 
         // Assign data
-        if(node == 1) m1_true_vel = vel;
-        if(node == 2) m2_true_vel = vel;
-        if(node == 3) m3_true_vel = vel;
+        if(node == 1) m1_true_vel = vel; m1_true_pos = pos;
+        if(node == 2) m2_true_vel = vel; m2_true_pos = pos;
+        if(node == 3) m3_true_vel = vel; m3_true_pos = pos;
 
-        // FOR PRINTING ONLY
-        char serial_buffer[50];
-        sprintf(serial_buffer, "Motor %d   Pos: %f   Vel %f", node, pos, vel);
-        Serial.println(serial_buffer);
-
+        // FOR PRINTING/PLOTTING ONLY
+        /*
+        Serial.print("Pos:");
+        Serial.print(pos);
+        Serial.print(",");
+        Serial.print("Vel:");
+        Serial.println(vel);
+        */
     }
-    // Torque data: disabled. should only be enabled while collecting data for plotting (not needed for control loop)
-    /*
-    if (cmd == GET_TORQUE){
-        // Extract data
-        memcpy(&torq, msg.buf, 4);
-
-        // Assign data
-        if(node == 1) m1_true_torque = torq;
-        if(node == 2) m2_true_torque = torq;
-        if(node == 3) m3_true_torque = torq;
-
-        // FOR PRINTING ONLY
-        char serial_buffer = [50];
-        sprintf(serial_buffer, "Motor %d   Torque: %f", node, torq);
-        Serial.println(serial_buffer);
-    }
-    */
-    
 }
