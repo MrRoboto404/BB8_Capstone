@@ -29,7 +29,7 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define E_STOP (0x02)
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
-
+// Control loop switch
 #define SWITCH_PIN 14
 
 //------Global Variables------
@@ -240,7 +240,6 @@ Arguments: none
 */
 void IMU_ISR(){
   imu_ready = true;
-}
 
   // Complementary filter
   float alpha    = tau / (tau + dt);
