@@ -1,7 +1,6 @@
 //========================INCLUDES========================
 #include <FlexCAN_T4.h>
 #include <stdio.h>
-
 //========================GLOBAL STUFF========================
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 
@@ -35,6 +34,32 @@ int flag = 1;
 
 int sleep_time = 1000 / frequency;
 
+//____________ PI Controller Setup ____________
+IntervalTimer controlTimer;
+float dt_ctrl = 1.0/160.0; // (160Hz)
+float BTI = 1000000*dt_ctrl; // 
+
+// PI Controller coef.
+float Kp = 0.022; 
+float Ki = 0.440;
+
+// Pre-calculate Tustin coefficients (eq.7.32 - Garbini et al.)
+float b0 = Kp + (0.5 * Ki * dt_ctrl);
+float b1 = -Kp + (0.5 * Ki * dt_ctrl);
+
+// State variables for discrete PI
+// e - error signal (angular velocity)
+// u - torque command
+float e_k = 0.0;
+float e_k_minus_1 = 0.0;
+float u_k = 0.0;
+float u_k_minus_1 = 0.0;
+
+// Targets and Limits
+int n_gear = 27;
+float target_vel_rads = 0.0;
+float max_torque = 0.25;        // SAFETY LIMIT: Max Nm commanded to ODrive
+
 
 //========================DEFINITIONS========================
 // Setup of communication, serial port, and CAN
@@ -58,6 +83,11 @@ void setup() {
     // Activate motors for input
     ready_motors();
 
+    // PI CONTROLLER TIMER 
+    // Start the 5ms (5000 microsecond) PI control loop
+    controlTimer.begin(PI_Control_ISR, BTI);
+
+
     Serial.println("------------Completed Setup.------------");
     Serial.println("Beginning Testing in");
     Serial.println("3...");
@@ -71,31 +101,24 @@ void setup() {
 // main loop
 void loop() {
     Can2.events();
-    static unsigned long start_time = millis();
-    float t = (millis() - start_time) / 1000.0;
-    if (t < t_total){
-        float cmd = peak_torque * sin(2 * PI * frequency * t);
 
-        //Serial.println(cmd);
-
-        send_torque(MOTOR_2, cmd);
-
-        Serial.print("Pos:");
-        Serial.print(m2_true_pos);
-        Serial.print(",");
-        Serial.print("Vel:");
-        Serial.println(m2_true_vel);
-
-        delay(1);
+    if (millis() > 5000 && target_vel_rads == 0.0) {
+        target_vel_rads = n_gear * 30 * PI / 30;
     }
-    if ((t > t_total) && (flag == 1)){
-        send_torque(MOTOR_2, 0);
-        idle_motors();
-        Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
-        flag = 0;
+
+    // Print data to the Serial Plotter every 10ms (100Hz)
+    static uint32_t last_print = 0;
+    if (millis() - last_print > 10) {
+        last_print = millis();
+        
+        // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
+        Serial.print("Target_rads:");
+        Serial.print(target_vel_rads);
+        Serial.print(" Actual_rads:");
+        Serial.print(m2_true_vel * 2.0 * PI);
+        Serial.print(" Torque_Cmd_Nm:");
+        Serial.println(u_k); // u_k is updated in your ISR
     }
-    
-    
 }
 
 /*  Function:    print_CAN_frame
@@ -300,4 +323,27 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
         if(node == 2) m2_true_vel = vel;
         if(node == 3) m3_true_vel = vel;
     }
+}
+
+// MAIN MOTOR CONTROL LOOP
+void PI_Control_ISR() {
+  // 1. Get current velocity and convert turns/s to rad/s
+  // (ODrive natively sends velocity in turns/s via CAN)
+  float actual_vel_rads = m2_true_vel * 2.0 * PI; 
+
+  // 2. Calculate error
+  e_k = target_vel_rads - actual_vel_rads;
+
+  // 3. Evaluate Tustin difference equation
+  u_k = u_k_minus_1 + (b0 * e_k) + (b1 * e_k_minus_1);
+
+  // 4. Saturate
+  u_k = constrain(u_k, -max_torque, max_torque);
+
+  // 5. Send Torque to ODrive
+  send_torque(MOTOR_2, u_k);
+
+  // 6. Shift states
+  e_k_minus_1 = e_k;
+  u_k_minus_1 = u_k;
 }
