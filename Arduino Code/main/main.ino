@@ -23,10 +23,7 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define MOTOR_3 (0x03 << 5)
 // CAN ODrive commands
 #define SET_TORQUE (0x00E)
-#define GET_ENCODER (0x009)
-#define GET_TORQUE (0x01C)
-#define CLEAR_ERROR (0x018)
-#define E_STOP (0x02)
+#define GET_ENCODER (0x09)
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 // Control loop switch
@@ -34,16 +31,14 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 
 //------Global Variables------
 //____________CAN____________
-//float m1_true_torque; DISABLED, only needed for data collection
-//float m2_true_torque;
-//float m3_true_torque;
-float m1_true_vel;
-float m2_true_vel;
-float m3_true_vel;
+//float motor_true_torques; DISABLED, only needed for data collection
+int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
+float motor_true_vels[3]; // index 0 is motor 1, and so on
 int axis_state = 1; // default to idle
+float pos, vel; // placeholder variables for recieving data from encoders
 
 
-//____________IMU ____________
+//____________IMU____________
 // byte mag_CS = 9;
 byte ism_CS = 10;
 
@@ -55,7 +50,7 @@ IntervalTimer myTimer;
 int imu_timer_freq = 160; //hz
 int imu_period = 1000000/imu_timer_freq; //convert to seconds, rounds to floor of quintent, us
 
-//____________IMU Filter ____________
+//____________IMU Filter____________
 const float wb  = 1.1;
 const float tau = 1.0 / wb;
 const float dt  = 1.0 / 160;
@@ -206,6 +201,7 @@ void loop() {
     Can2.events();
 
     // note: motor velocities are global vars
+    // request to update global variables via "demand_all_encoders"
   }
   else if (!control_run){
     Serial.println("Control Switch is OFF");
@@ -250,7 +246,23 @@ void IMU_ISR(){
 // CAN stuff
 
 /**
- * @brief Translates incoming CAN messages
+ * @brief Allows the Teensy to update global encoder variables at calling speed.
+ * 
+ * @returns None
+ */
+void demand_all_encoders(){
+    CAN_message_t msg;
+    msg.len = 0; // no payload
+    msg.flags.remote = 1; // sets RTR
+
+    for {int i = 0; i<3; ++i}{
+        msg.id = MOTOR_IDS[i] | GET_ENCODER;
+        Can2.write(msg);
+    }
+}
+
+/**
+ * @brief Translates incoming CAN messages. Right now, just the required motor velocities are decoded.
  * 
  * @param msg not needed in use, as it is a global declaration
  * 
@@ -265,18 +277,20 @@ void can_sniff(const CAN_message_t &msg) {
     10  9  8  7  6  5 |  4  3  2  1  0
           msg ID           cmd_id 
     */
-    float pos, vel, torq;
     uint8_t node = msg.id >> 5; // shift over to find the node/origin
     uint8_t cmd  = msg.id & 0x1F; // only look at the cmd_id region
 
-    if (cmd == GET_ENCODER){
-        // Extract data
-        memcpy(&pos, msg.buf, 4);
-        memcpy(&vel, msg.buf + 4, 4);
-        // Assign data
-        if(node == 1) {m1_true_vel = vel;}
-        else if(node == 2) {m2_true_vel = vel;}
-        else if(node == 3) {m3_true_vel = vel;}
+    // Directly assign data from the message buffer
+    if (cmd == GET_ENCODER) {
+        // Directly assign VELO data from the message buffer
+        float* vel_ptr = reinterpret_cast<float*>(msg.buf + 4);
+        
+        // Use an array to map node numbers to velocity variables
+        if (node >= 1 && node <= 3) {
+            float vel = *vel_ptr;  // Extract velocity from message
+            // Direct assignment to the appropriate variable
+            m_true_vel[node - 1] = vel;
+        }
     }
     
 }

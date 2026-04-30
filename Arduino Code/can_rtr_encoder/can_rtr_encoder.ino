@@ -19,18 +19,20 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 
+// Reserve spots in memory for cansniff
+float pos, vel, torq;
+uint8_t node, cmd;
+CAN_message_t send_msg;
+
+
 //______Global Variables______
-float m1_true_vel;
-float m2_true_vel;
-float m3_true_vel;
-float m1_true_pos;
-float m2_true_pos;
-float m3_true_pos;
+int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
+float motor_true_vels[3]; // index 0 is motor 1, and so on
 
 const uint32_t RTR_PERIOD_US = 6250; // 160 Hz
 uint32_t last_rtr_time = 0;
 int t_total = 2;
-float peak_torque = 0.1; // N*m, don't change
+float peak_torque = 0.09; // N*m, don't change
 int flag = 1;
 
 
@@ -88,7 +90,7 @@ void loop() {
         if (now - last_rtr_time >= RTR_PERIOD_US) {
             last_rtr_time = now;
 
-            request_rtr_encoder(MOTOR_3);
+            demand_encoder(MOTOR_3, send_msg);
         }
     }
 
@@ -98,20 +100,16 @@ void loop() {
         idle_motors();
 
         Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
-        Serial.println(m3_true_pos);
 
         test_finished = true;
     }
 }
 
-void request_rtr_encoder(int MOTOR){
-    CAN_message_t msg;
+void demand_encoder(int MOTOR, CAN_message_t msg){
     msg.id = MOTOR | GET_ENCODER;
     msg.len = 0; // no payload
     msg.flags.remote = 1; // sets RTR
-    if (!Can2.write(msg)) {
-        Serial.println("CAN RTR request failed");
-    }
+    Can2.write(msg);
 }
 
 /*  Function:    print_CAN_frame
@@ -303,17 +301,9 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
     10  9  8  7  6  5 |  4  3  2  1  0
           msg ID           cmd_id 
     */
-    float pos, vel, torq;
-    uint8_t node = msg.id >> 5; // shift over to find the node/origin
-    uint8_t cmd  = msg.id & 0x1F; // only look at the cmd_id region by setting those to 1 and the rest 0, then &
-    if (cmd == GET_ENCODER){
-        // Extract data
-        memcpy(&pos, msg.buf, 4);
-        memcpy(&vel, msg.buf + 4, 4);
-
-        // Assign data
-        if(node == 1) {m1_true_vel = vel; m1_true_pos = pos;}
-        if(node == 2) {m2_true_vel = vel; m2_true_pos = pos;}
-        if(node == 3) {m3_true_vel = vel; m3_true_pos = pos;}
+    node = msg.id >> 5; // shift over to find the node/origin
+    cmd  = msg.id & 0x1F; // only look at the cmd_id region by setting those to 1 and the rest 0, then &
+    if (cmd == GET_ENCODER) { // as minimal code as possble
+        motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
     }
 }
