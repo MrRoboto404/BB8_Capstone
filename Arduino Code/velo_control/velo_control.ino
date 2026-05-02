@@ -40,8 +40,8 @@ float dt_ctrl = 1.0/160.0; // (160Hz)
 float BTI = 1000000*dt_ctrl; // 
 
 // PI Controller coef.
-float Kp = 0.022; 
-float Ki = 0.440;
+float Kp = 0.0008; 
+float Ki = 0.003;
 
 // Pre-calculate Tustin coefficients (eq.7.32 - Garbini et al.)
 float b0 = Kp + (0.5 * Ki * dt_ctrl);
@@ -50,15 +50,26 @@ float b1 = -Kp + (0.5 * Ki * dt_ctrl);
 // State variables for discrete PI
 // e - error signal (angular velocity)
 // u - torque command
-float e_k = 0.0;
-float e_k_minus_1 = 0.0;
-float u_k = 0.0;
-float u_k_minus_1 = 0.0;
+float e_k_1 = 0.0;
+float e_k_1_minus_1 = 0.0;
+float u_k_1 = 0.0;
+float u_k_1_minus_1 = 0.0;
 
+float e_k_2 = 0.0;
+float e_k_2_minus_1 = 0.0;
+float u_k_2 = 0.0;
+float u_k_2_minus_1 = 0.0;
+
+float e_k_3 = 0.0;
+float e_k_3_minus_1 = 0.0;
+float u_k_3 = 0.0;
+float u_k_3_minus_1 = 0.0;
 // Targets and Limits
 int n_gear = 27;
-float target_vel_rads = 0.0;
-float max_torque = 0.25;        // SAFETY LIMIT: Max Nm commanded to ODrive
+float target_vel_rads_1 = 0.0;
+float target_vel_rads_2 = 0.0;
+float target_vel_rads_3 = 0.0;
+float max_torque = 0.26;        // SAFETY LIMIT: Max Nm commanded to ODrive
 
 
 //========================DEFINITIONS========================
@@ -102,23 +113,51 @@ void setup() {
 void loop() {
     Can2.events();
 
-    if (millis() > 5000 && target_vel_rads == 0.0) {
-        target_vel_rads = n_gear * 30 * PI / 30;
-    }
+    static unsigned long start_time = millis();
+    float t = (millis() - start_time) / 1000.0;
 
-    // Print data to the Serial Plotter every 10ms (100Hz)
-    static uint32_t last_print = 0;
-    if (millis() - last_print > 10) {
-        last_print = millis();
-        
-        // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
-        Serial.print("Target_rads:");
-        Serial.print(target_vel_rads);
-        Serial.print(" Actual_rads:");
-        Serial.print(m2_true_vel * 2.0 * PI);
-        Serial.print(" Torque_Cmd_Nm:");
-        Serial.println(u_k); // u_k is updated in your ISR
+    if (t < t_total){
+        if (millis() > 5000) {
+            target_vel_rads_1 = n_gear * 20 * PI / 30;
+            target_vel_rads_2 = n_gear * 30 * PI / 30;
+            target_vel_rads_3 = n_gear * 40 * PI / 30;
+        }
+
+        // Print data to the Serial Plotter every 10ms (100Hz)
+        static uint32_t last_print = 0;
+        if (millis() - last_print > 10) {
+            last_print = millis();
+            
+            // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
+            Serial.print("Target_rads_1:");
+            Serial.print(target_vel_rads_1);
+            Serial.print(" Actual_rads_1:");
+            Serial.print(m1_true_vel * 2.0 * PI);
+            Serial.print(" Torque_Cmd_1_Nm:");
+            Serial.print(u_k_2);
+            Serial.print("Target_rads_2:");
+            Serial.print(target_vel_rads_2);
+            Serial.print(" Actual_rads_2:");
+            Serial.print(m2_true_vel * 2.0 * PI);
+            Serial.print(" Torque_Cmd_2_Nm:");
+            Serial.print(u_k_2);
+            Serial.print("Target_rads_3:");
+            Serial.print(target_vel_rads_3);
+            Serial.print(" Actual_rads_3:");
+            Serial.print(m3_true_vel * 2.0 * PI);
+            Serial.print(" Torque_Cmd_3_Nm:");
+            Serial.println(u_k_3);
+        }
     }
+    if ((t > t_total) && (flag == 1)){
+        controlTimer.end(); // Stop the PI loop interrupt
+        send_torque(MOTOR_1, 0);
+        send_torque(MOTOR_2, 0);
+        send_torque(MOTOR_3, 0);
+        idle_motors();
+        Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
+        flag = 0;
+        }
 }
 
 /*  Function:    print_CAN_frame
@@ -327,23 +366,36 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
 
 // MAIN MOTOR CONTROL LOOP
 void PI_Control_ISR() {
-  // 1. Get current velocity and convert turns/s to rad/s
-  // (ODrive natively sends velocity in turns/s via CAN)
-  float actual_vel_rads = m2_true_vel * 2.0 * PI; 
+    // Get current velocity and convert rev/s to rad/s
+    float actual_vel_rads_1 = m2_true_vel * 2.0 * PI;
+    float actual_vel_rads_2 = m2_true_vel * 2.0 * PI;
+    float actual_vel_rads_3 = m3_true_vel * 2.0 * PI; 
 
-  // 2. Calculate error
-  e_k = target_vel_rads - actual_vel_rads;
+    // Error signal
+    e_k_1 = target_vel_rads_1 - actual_vel_rads_1;
+    e_k_2 = target_vel_rads_2 - actual_vel_rads_2;
+    e_k_3 = target_vel_rads_3 - actual_vel_rads_3;
 
-  // 3. Evaluate Tustin difference equation
-  u_k = u_k_minus_1 + (b0 * e_k) + (b1 * e_k_minus_1);
+    // Evaluate Tustin difference equation
+    u_k_1 = u_k_1_minus_1 + (b0 * e_k_2) + (b1 * e_k_1_minus_1);
+    u_k_2 = u_k_2_minus_1 + (b0 * e_k_2) + (b1 * e_k_2_minus_1);
+    u_k_3 = u_k_3_minus_1 + (b0 * e_k_3) + (b1 * e_k_3_minus_1);
 
-  // 4. Saturate
-  u_k = constrain(u_k, -max_torque, max_torque);
+    // Saturate
+    u_k_1 = constrain(u_k_1, -max_torque, max_torque);
+    u_k_2 = constrain(u_k_2, -max_torque, max_torque);
+    u_k_3 = constrain(u_k_3, -max_torque, max_torque);
+    
+    // Send Torque to ODrive
+    send_torque(MOTOR_1, u_k_1);
+    send_torque(MOTOR_2, u_k_2);
+    send_torque(MOTOR_3, u_k_3);
 
-  // 5. Send Torque to ODrive
-  send_torque(MOTOR_2, u_k);
-
-  // 6. Shift states
-  e_k_minus_1 = e_k;
-  u_k_minus_1 = u_k;
+    // Shift states
+    e_k_1_minus_1 = e_k_1;
+    u_k_1_minus_1 = u_k_1;
+    e_k_2_minus_1 = e_k_2;
+    u_k_2_minus_1 = u_k_2;
+    e_k_3_minus_1 = e_k_3;
+    u_k_3_minus_1 = u_k_3;
 }
