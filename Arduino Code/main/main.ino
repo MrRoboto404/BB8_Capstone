@@ -13,8 +13,7 @@
 
 /*========================GLOBAL DECLARATIONS========================*/
 //____________CAN Setup____________
-// CAN bus wired to CAN2
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
+
 
 //------Constants------
 // CAN IDs correctly bit-shifted
@@ -32,10 +31,11 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 //------Global Variables------
 //____________CAN____________
 //float motor_true_torques; DISABLED, only needed for data collection
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2; // wired to CAN2
 int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
 float motor_true_vels[3]; // index 0 is motor 1, and so on
 int axis_state = 1; // default to idle
-float pos, vel; // placeholder variables for recieving data from encoders
+float vel; // placeholder variables for recieving data from encoders
 
 
 //____________IMU____________
@@ -200,8 +200,8 @@ void loop() {
     // controller code goes here
     Can2.events();
 
-    // note: motor velocities are global vars
-    // request to update global variables via "demand_all_encoders"
+    // note: motor velocities are global vars and are updated up to 1kHz automatically
+    // 
   }
   else if (!control_run){
     Serial.println("Control Switch is OFF");
@@ -246,7 +246,7 @@ void IMU_ISR(){
 // CAN stuff
 
 /**
- * @brief Allows the Teensy to update global encoder variables at calling speed.
+ * @brief Allows the Teensy to update global encoder variables at calling speed. Optional, as default cyclic messages can go up to 1kHz
  * 
  * @returns None
  */
@@ -282,15 +282,8 @@ void can_sniff(const CAN_message_t &msg) {
 
     // Directly assign data from the message buffer
     if (cmd == GET_ENCODER) {
-        // Directly assign VELO data from the message buffer
-        float* vel_ptr = reinterpret_cast<float*>(msg.buf + 4);
-        
         // Use an array to map node numbers to velocity variables
-        if (node >= 1 && node <= 3) {
-            float vel = *vel_ptr;  // Extract velocity from message
-            // Direct assignment to the appropriate variable
-            m_true_vel[node - 1] = vel;
-        }
+        motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
     }
     
 }
@@ -310,13 +303,7 @@ void send_torque(int MOTOR, float torque){
     msg.id = MOTOR | SET_TORQUE; // eg 0x03 shifted | 0x09 = 000011 01110 bin = 110 dec = 0x6E (0x4E for 2, 0x2E for 1)
     msg.len = 4;
     memcpy(msg.buf, &torque, 4);
-
-    if (Can2.write(msg)) {
-        print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN torque send failed");
-    }
+    Can2.write(msg);
 }
 
 /**

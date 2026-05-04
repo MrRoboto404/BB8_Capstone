@@ -22,14 +22,13 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 // Reserve spots in memory for cansniff
 float pos, vel, torq;
 uint8_t node, cmd;
-CAN_message_t send_msg;
 
 
 //______Global Variables______
 int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
 float motor_true_vels[3]; // index 0 is motor 1, and so on
 
-const uint32_t RTR_PERIOD_US = 6250; // 160 Hz
+const uint32_t RTR_PERIOD_US = 5555; // 180 Hz
 uint32_t last_rtr_time = 0;
 int t_total = 2;
 float peak_torque = 0.09; // N*m, don't change
@@ -80,22 +79,24 @@ void loop() {
 
     // === START TEST ONCE ===
     if (!test_started) {
+        send_torque(MOTOR_2, peak_torque);
         send_torque(MOTOR_3, peak_torque);
         test_started = true;
     }
 
-    // === RUN TEST (RTR @ 160 Hz) ===
+    //=== RUN TEST (RTR @ 160 Hz) ===
     if (test_started && !test_finished && t <= t_total) {
         uint32_t now = micros();
         if (now - last_rtr_time >= RTR_PERIOD_US) {
             last_rtr_time = now;
 
-            demand_encoder(MOTOR_3, send_msg);
+            demand_encoder();
         }
     }
 
     // === END TEST ONCE ===
     if (!test_finished && t > t_total) {
+        send_torque(MOTOR_2, 0);
         send_torque(MOTOR_3, 0);
         idle_motors();
 
@@ -105,11 +106,15 @@ void loop() {
     }
 }
 
-void demand_encoder(int MOTOR, CAN_message_t msg){
-    msg.id = MOTOR | GET_ENCODER;
+void demand_encoder(){
+    CAN_message_t msg;
     msg.len = 0; // no payload
     msg.flags.remote = 1; // sets RTR
-    Can2.write(msg);
+
+    for (int i = 1; i<3; ++i){ // just the motor 2 and 3 for the test
+        msg.id = MOTOR_IDS[i] | GET_ENCODER;
+        Can2.write(msg);
+    }
 }
 
 /*  Function:    print_CAN_frame
