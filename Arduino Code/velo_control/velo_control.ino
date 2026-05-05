@@ -19,6 +19,8 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define SET_ABS_POS (0x19)
 
 //______Global Variables______
+unsigned long test_start_time = 0; // Stores the start of the motion
+
 float m1_true_vel;
 float m2_true_vel;
 float m3_true_vel;
@@ -27,7 +29,7 @@ float m2_true_pos;
 float m3_true_pos;
 
 int runcount = 0;
-int t_total = 20;
+int t_total = 2;
 float frequency = 0.9; // Hz, cannot exceed 0.9
 float peak_torque = 0.1; // N*m, don't change
 int flag = 1;
@@ -40,7 +42,7 @@ float dt_ctrl = 1.0/160.0; // (160Hz)
 float BTI = 1000000*dt_ctrl; // 
 
 // PI Controller coef.
-float Kp = 0.0008; 
+float Kp = 0.001; 
 float Ki = 0.003;
 
 // Pre-calculate Tustin coefficients (eq.7.32 - Garbini et al.)
@@ -107,6 +109,8 @@ void setup() {
     delay(1000);
     Serial.println("1...");
     delay(1000);
+    Serial.println("Time, rad_t_1, rad_a_1, T_cmd_1, rad_t_2, rad_a_2, T_cmd_2, rad_t_3, rad_a_3, T_cmd_3");
+    test_start_time = millis(); // <--- Add this here
 }
 
 // main loop
@@ -117,35 +121,40 @@ void loop() {
     float t = (millis() - start_time) / 1000.0;
 
     if (t < t_total){
-        if (millis() > 5000) {
+        if (millis() > 4500) {
             target_vel_rads_1 = n_gear * 20 * PI / 30;
-            target_vel_rads_2 = n_gear * 30 * PI / 30;
-            target_vel_rads_3 = n_gear * 40 * PI / 30;
+            target_vel_rads_2 = n_gear * 20 * PI / 30;
+            target_vel_rads_3 = n_gear * 20 * PI / 30;
         }
 
         // Print data to the Serial Plotter every 10ms (100Hz)
         static uint32_t last_print = 0;
         if (millis() - last_print > 10) {
             last_print = millis();
-            
+            // Calculate seconds as a float (e.g., 1.02 seconds)
+            float elapsed_seconds = (millis() - test_start_time) / 1000.0;
+
+            // Print Time first
+            Serial.print(elapsed_seconds, 3); // 3 decimal places for millisecond precision
+            Serial.print(", ");
+
             // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
-            Serial.print("Target_rads_1:");
             Serial.print(target_vel_rads_1);
-            Serial.print(" Actual_rads_1:");
+            Serial.print(", ");
             Serial.print(m1_true_vel * 2.0 * PI);
-            Serial.print(" Torque_Cmd_1_Nm:");
-            Serial.print(u_k_2);
-            Serial.print("Target_rads_2:");
+            Serial.print(", ");
+            Serial.print(u_k_1);
+            Serial.print(", ");
             Serial.print(target_vel_rads_2);
-            Serial.print(" Actual_rads_2:");
+            Serial.print(", ");
             Serial.print(m2_true_vel * 2.0 * PI);
-            Serial.print(" Torque_Cmd_2_Nm:");
+            Serial.print(", ");
             Serial.print(u_k_2);
-            Serial.print("Target_rads_3:");
+            Serial.print(", ");
             Serial.print(target_vel_rads_3);
-            Serial.print(" Actual_rads_3:");
+            Serial.print(", ");
             Serial.print(m3_true_vel * 2.0 * PI);
-            Serial.print(" Torque_Cmd_3_Nm:");
+            Serial.print(", ");
             Serial.println(u_k_3);
         }
     }
@@ -367,7 +376,7 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
 // MAIN MOTOR CONTROL LOOP
 void PI_Control_ISR() {
     // Get current velocity and convert rev/s to rad/s
-    float actual_vel_rads_1 = m2_true_vel * 2.0 * PI;
+    float actual_vel_rads_1 = m1_true_vel * 2.0 * PI;
     float actual_vel_rads_2 = m2_true_vel * 2.0 * PI;
     float actual_vel_rads_3 = m3_true_vel * 2.0 * PI; 
 
@@ -377,7 +386,7 @@ void PI_Control_ISR() {
     e_k_3 = target_vel_rads_3 - actual_vel_rads_3;
 
     // Evaluate Tustin difference equation
-    u_k_1 = u_k_1_minus_1 + (b0 * e_k_2) + (b1 * e_k_1_minus_1);
+    u_k_1 = u_k_1_minus_1 + (b0 * e_k_1) + (b1 * e_k_1_minus_1);
     u_k_2 = u_k_2_minus_1 + (b0 * e_k_2) + (b1 * e_k_2_minus_1);
     u_k_3 = u_k_3_minus_1 + (b0 * e_k_3) + (b1 * e_k_3_minus_1);
 
