@@ -66,3 +66,9 @@ void Filter::reset() {
     _madgwick.begin(_sample_freq);
     _madgwick.setBeta(_beta);
 }
+
+void Filter::setBias(float bx, float by, float bz) {
+    _gx_bias = bx;
+    _gy_bias = by;
+    _gz_bias = bz;
+}

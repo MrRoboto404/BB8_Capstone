@@ -28,6 +28,9 @@ public:
     // Takes samples from a provided callback function
     void calibrateGyroBias(void (*readGyro)(float&, float&, float&), int num_samples = 10000);
 
+    // Set gyro bias directly (skip calibration, use hardcoded values)
+    void setBias(float bx, float by, float bz);
+
     // Reset filter state to identity orientation
     void reset();
 
