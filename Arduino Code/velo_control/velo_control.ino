@@ -143,19 +143,19 @@ void loop() {
             Serial.print(", ");
             Serial.print(m1_true_vel * 2.0 * PI);
             Serial.print(", ");
-            Serial.print(u_k_1);
+            Serial.print(u_k_1, 5);
             Serial.print(", ");
             Serial.print(target_vel_rads_2);
             Serial.print(", ");
             Serial.print(m2_true_vel * 2.0 * PI);
             Serial.print(", ");
-            Serial.print(u_k_2);
+            Serial.print(u_k_2, 5);
             Serial.print(", ");
             Serial.print(target_vel_rads_3);
             Serial.print(", ");
             Serial.print(m3_true_vel * 2.0 * PI);
             Serial.print(", ");
-            Serial.println(u_k_3);
+            Serial.println(u_k_3, 5);
         }
     }
     if ((t > t_total) && (flag == 1)){
