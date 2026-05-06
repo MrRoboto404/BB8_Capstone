@@ -39,10 +39,7 @@ float vel; // placeholder variables for recieving data from encoders
 
 
 //____________IMU____________
-// byte mag_CS = 9;
-byte ism_CS = 10;
-
-SparkFun_ISM330DHCX_SPI myISM; // our accelerameter
+SparkFun_ISM330DHCX myISM;
 sfe_ism_data_t accelData; // accel data storage variable filtered
 sfe_ism_data_t gyroData; // gyro data storage variable filtered
 
@@ -126,9 +123,7 @@ void setup() {
   /*____________________________IMU CALIBRATION____________________________*/
   // Keep IMU perfectly still during this period
   imu_filter.begin();
-  Serial.println("Calibrating gyro bias, keep IMU still...");
-  imu_filter.calibrateGyroBias(readGyroSample, 10000);
-  Serial.println("Calibration complete");
+  imu_filter.setBias(0.0062981257f, -0.0121280579f, 0.0001833806f); 
 
   myTimer.begin(IMU_ISR, imu_period);
 
