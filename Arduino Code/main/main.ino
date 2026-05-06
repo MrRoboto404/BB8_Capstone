@@ -236,11 +236,6 @@ Arguments: none
 */
 void IMU_ISR(){
   imu_ready = true;
-
-  // Complementary filter
-  float alpha    = tau / (tau + dt);
-  roll_filtered  = alpha * (roll_filtered  + gx * dt) + (1.0 - alpha) * accel_roll_raw;
-  pitch_filtered = alpha * (pitch_filtered + gy * dt) + (1.0 - alpha) * accel_pitch_raw;
 }
 
 // CAN stuff
