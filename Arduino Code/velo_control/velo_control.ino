@@ -18,6 +18,8 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 
+#define OSC_PIN 3 // for monitoring ISR
+
 //______Global Variables______
 unsigned long test_start_time = 0; // Stores the start of the motion
 
@@ -25,6 +27,7 @@ int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
 float motor_true_vels[3]; // index 0 is motor 1, and so on
 float motor_true_torqs[3];
 float motor_torq_commands[3];
+float MOTOR_RESET_VAL = -90000000;
 
 int runcount = 0;
 int t_total = 2;
@@ -97,6 +100,10 @@ void setup() {
     // PI CONTROLLER TIMER 
     // Start the 5ms (5000 microsecond) PI control loop
     controlTimer.begin(PI_Control_ISR, BTI);
+
+    // for monitoring on the ISR on the oscilloscope
+    pinMode(OSC_PIN, OUTPUT);
+    digitalWriteFast(OSC_PIN, LOW);
 
 
     Serial.println("------------Completed Setup.------------");
@@ -301,6 +308,13 @@ void idle_motors(void){
     delay(10);
 }
 
+void demand_encoder(int MOTOR){
+    CAN_message_t msg;
+    msg.len = 0; // no payload
+    msg.flags.remote = 1; // sets RTR
+    msg.id = MOTOR | GET_ENCODER;
+    Can2.write(msg);
+}
 
 
 /*  Function:    reset_positions
@@ -361,18 +375,35 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
     if (cmd == GET_ENCODER) { // as minimal code as possble
         motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
     }
-    else if (cmd == GET_TORQUE) { // as minimal code as possble
-        motor_torq_commands[node - 1] = *reinterpret_cast<const float*>(msg.buf);
-        motor_true_torqs[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
-    }
+    // else if (cmd == GET_TORQUE) { // as minimal code as possble
+    //     motor_torq_commands[node - 1] = *reinterpret_cast<const float*>(msg.buf);
+    //     motor_true_torqs[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
+    // }
 }
 
 // MAIN MOTOR CONTROL LOOP
 void PI_Control_ISR() {
-    // Get current velocity and convert rev/s to rad/s
-    float actual_vel_rads_1 = motor_true_vels[0] * 2.0 * PI;
-    float actual_vel_rads_2 = motor_true_vels[1] * 2.0 * PI;
-    float actual_vel_rads_3 = motor_true_vels[2] * 2.0 * PI; 
+    // set oscilloscope high to show start of BTI 
+    digitalWriteFast(OSC, HIGH);
+    
+
+    // Get current velocity of motor 1 for this BTI
+    motor_true_vels[0] = MOTOR_RESET_VAL;
+    demand_encoder(MOTOR_1);
+    while (motor_true_vels[0] == MOTOR_RESET_VAL){} // wait for new data from cansniff
+    float actual_vel_rads_1 = motor_true_vels[0] * 2.0 * PI; // rev/s to rad/s
+
+    // Get current velocity of motor 2 for this BTI
+    motor_true_vels[1] = MOTOR_RESET_VAL;
+    demand_encoder(MOTOR_2);
+    while (motor_true_vels[1] == MOTOR_RESET_VAL){} // wait for new data from cansniff
+    float actual_vel_rads_2 = motor_true_vels[1] * 2.0 * PI; // rev/s to rad/s
+
+    // Get current velocity of motor 3 for this BTI
+    motor_true_vels[2] = MOTOR_RESET_VAL;
+    demand_encoder(MOTOR_3);
+    while (motor_true_vels[2] == MOTOR_RESET_VAL){} // wait for new data from cansniff
+    float actual_vel_rads_3 = motor_true_vels[2] * 2.0 * PI; // rev/s to rad/s
 
     // Error signal
     e_k_1 = target_vel_rads_1 - actual_vel_rads_1;
@@ -401,4 +432,7 @@ void PI_Control_ISR() {
     u_k_2_minus_1 = u_k_2;
     e_k_3_minus_1 = e_k_3;
     u_k_3_minus_1 = u_k_3;
+
+    // Set oscilloscope to low to show end of BTI
+    digitalWriteFast(OSC_PIN, LOW);
 }
