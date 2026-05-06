@@ -1,7 +1,7 @@
 /*========================INCLUDES========================*/
 #include <FlexCAN_T4.h>
 #include <stdio.h>
-#include <SPI.h>
+#include <Wire.h>
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
 #include <Bounce2.h>
@@ -85,15 +85,11 @@ void setup() {
   Serial.begin(9600);
   Serial.println("------------Beginning Setup------------");
   /*____________________________SPI/IMU____________________________*/
-  SPI.begin();
-
-  // pinMode(mag_CS, OUTPUT); // set mag chip select pin to output mode
-  pinMode(ism_CS,OUTPUT); // set accel chip select pin to output mode
-  // digitalWrite(mag_CS, HIGH); // set mag chip select pin to high as mag is low active
-  digitalWrite(ism_CS, HIGH); // set ism chip select pin to high as ism is low active
+  
+  Wire.begin();
 
   // if connection fails say so
-  while(!myISM.begin(ism_CS)){
+  while(!myISM.begin()){
     Serial.println("Failed to connect to IMU!");
   }
 
@@ -122,6 +118,7 @@ void setup() {
 
   /*____________________________IMU CALIBRATION____________________________*/
   // Keep IMU perfectly still during this period
+  Serial.println("Calibrating, keep still Ryan");
   imu_filter.begin();
   imu_filter.setBias(0.0062981257f, -0.0121280579f, 0.0001833806f); 
 
