@@ -124,7 +124,7 @@ void setup() {
   /*_________________________CAN/MOTORS_______________________*/
   // Start bus on existing CAN2
   Can2.begin();
-  Can2.setBaudRate(250000); // 250KB/sec
+  Can2.setBaudRate(500000); // 500KB/sec
 
   // Enable recieving messages
   Can2.enableMBInterrupts();
@@ -212,7 +212,7 @@ void cleanup(void){
   Serial.println("------------Safe Exit Requested------------");
   //------Motors------
   axis_state = 1;
-  set_motors_states(axis_state);
+  set_motors_states(axis_state); // idle
 
   //------IMU Stuff------
 
@@ -232,24 +232,7 @@ void IMU_ISR(){
   imu_ready = true;
 }
 
-// CAN stuff
-
-/**
- * @brief Allows the Teensy to update global encoder variables at calling speed. Optional, as default cyclic messages can go up to 1kHz
- * 
- * @returns None
- */
-void demand_all_encoders(){
-    CAN_message_t msg;
-    msg.len = 0; // no payload
-    msg.flags.remote = 1; // sets RTR
-
-    for {int i = 0; i<3; ++i}{
-        msg.id = MOTOR_IDS[i] | GET_ENCODER;
-        Can2.write(msg);
-    }
-}
-
+//======CAN stuff======
 /**
  * @brief Translates incoming CAN messages. Right now, just the required motor velocities are decoded.
  * 
@@ -304,40 +287,16 @@ void send_torque(int MOTOR, float torque){
  * @note Error messages printed to Serial
  */
 void set_motors_states(int axis_state){
-    // Motor 1
     CAN_message_t msg;
     msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 4;
     memcpy(msg.buf, &axis_state, 4);
-    if (Can2.write(msg)) {
+    for (int i = 0; i<3; ++i){
+        msg.id = MOTOR_IDS[i] | MOTOR_STATE;
+        Can2.write(msg);
         print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN axis state send failed: M1");
+        delay(10);
     }
-    delay(10);
-
-    // Motor 2
-    msg.id = MOTOR_2 | MOTOR_STATE;
-    msg.len = 4;
-    if (Can2.write(msg)) {
-        print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN axis state send failed: M2");
-    }
-    delay(10);
-
-    // Motor 3
-    msg.id = MOTOR_3 | MOTOR_STATE;
-    msg.len = 4;
-    if (Can2.write(msg)) {
-        print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN axis state send failed: M3");
-    }
-    delay(10);
 }
 
 /**
@@ -349,35 +308,15 @@ void set_motors_states(int axis_state){
  */
 void motors_reset_position(void){
     float set_zero = 0;
-
-    // Motor 1
     CAN_message_t msg;
     msg.id = MOTOR_1 | SET_ABS_POS;
     msg.len = 4;
     memcpy(msg.buf, &set_zero, 4);
-    if (Can2.write(msg)) {
+    for (int i = 0; i<3; ++i){
+        msg.id = MOTOR_IDS[i] | SET_ABS_POS;
+        Can2.write(msg);
         print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN pos reset send failed: M1");
-    }
-
-    // Motor 2
-    msg.id = MOTOR_2 | SET_ABS_POS;
-    if (Can2.write(msg)) {
-        print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN pos reset send failed: M2");
-    }
-
-    // Motor 3
-    msg.id = MOTOR_3 | SET_ABS_POS;
-    if (Can2.write(msg)) {
-        print_CAN_frame(msg);
-    } 
-    else {
-        Serial.println("CAN pos reset send failed: M3");
+        delay(10);
     }
 }
 
