@@ -25,15 +25,19 @@ unsigned long test_start_time = 0; // Stores the start of the motion
 
 int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
 float motor_true_vels[3]; // index 0 is motor 1, and so on
+//volatile bool motor_updated[3] = {};
 float motor_true_torqs[3];
 float motor_torq_commands[3];
-float MOTOR_RESET_VAL = -90000000;
+
+uint8_t node, cmd;
 
 int runcount = 0;
 int t_total = 2;
 float frequency = 0.9; // Hz, cannot exceed 0.9
 float peak_torque = 0.1; // N*m, don't change
-int flag = 1;
+int run_flag = 1;
+bool ISR_flag = 0;
+bool buf_flag = false; // so we actually have data
 
 int sleep_time = 1000 / frequency;
 
@@ -43,8 +47,8 @@ float dt_ctrl = 1.0/160.0; // (160Hz)
 float BTI = 1000000*dt_ctrl; // 
 
 // PI Controller coef.
-float Kp = 0.001; 
-float Ki = 0.003;
+float Kp = 0.0012; 
+float Ki = 0.006;
 
 // Pre-calculate Tustin coefficients (eq.7.32 - Garbini et al.)
 float b0 = Kp + (0.5 * Ki * dt_ctrl);
@@ -84,7 +88,7 @@ void setup() {
 
     // Start CAN bus
     Can2.begin();
-    Can2.setBaudRate(250000);
+    Can2.setBaudRate(1000000);
 
     // Enable reading the CAN bus
     // Upon recieving a message, sniff
@@ -115,12 +119,12 @@ void setup() {
     Serial.println("1...");
     delay(1000);
     Serial.println("Time, rad_t_1, rad_a_1, T_cmd_1, rad_t_2, rad_a_2, T_cmd_2, rad_t_3, rad_a_3, T_cmd_3");
-    test_start_time = millis(); // <--- Add this here
 }
 
 // main loop
 void loop() {
     Can2.events();
+    ISR_flag = 1;
 
     static unsigned long start_time = millis();
     float t = (millis() - start_time) / 1000.0;
@@ -131,47 +135,48 @@ void loop() {
             target_vel_rads_2 = n_gear * 20 * PI / 30;
             target_vel_rads_3 = n_gear * 20 * PI / 30;
         }
-
-        // Print data to the Serial Plotter every 10ms (100Hz)
-        static uint32_t last_print = 0;
-        if (millis() - last_print > 10) {
-            last_print = millis();
-            // Calculate seconds as a float (e.g., 1.02 seconds)
-            float elapsed_seconds = (millis() - test_start_time) / 1000.0;
-
-            // Print Time first
-            Serial.print(elapsed_seconds, 3); // 3 decimal places for millisecond precision
-            Serial.print(", ");
-
-            // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
-            Serial.print(target_vel_rads_1);
-            Serial.print(", ");
-            Serial.print(motor_true_vels[0] * 2.0 * PI);
-            Serial.print(", ");
-            Serial.print(u_k_1, 5);
-            Serial.print(", ");
-            Serial.print(target_vel_rads_2);
-            Serial.print(", ");
-            Serial.print(motor_true_vels[1] * 2.0 * PI);
-            Serial.print(", ");
-            Serial.print(u_k_2, 5);
-            Serial.print(", ");
-            Serial.print(target_vel_rads_3);
-            Serial.print(", ");
-            Serial.print(motor_true_vels[2] * 2.0 * PI);
-            Serial.print(", ");
-            Serial.println(u_k_3, 5);
-        }
     }
-    if ((t > t_total) && (flag == 1)){
+
+    //     // Print data to the Serial Plotter every 10ms (100Hz)
+    //     static uint32_t last_print = 0;
+    //     if (millis() - last_print > 10) {
+    //         last_print = millis();
+    //         // Calculate seconds as a float (e.g., 1.02 seconds)
+    //         float elapsed_seconds = (millis() - test_start_time) / 1000.0;
+
+    //         // Print Time first
+    //         Serial.print(elapsed_seconds, 3); // 3 decimal places for millisecond precision
+    //         Serial.print(", ");
+
+    //         // Print format for Arduino Serial Plotter: "Var1:value Var2:value"
+    //         Serial.print(target_vel_rads_1);
+    //         Serial.print(", ");
+    //         Serial.print(motor_true_vels[0] * 2.0 * PI);
+    //         Serial.print(", ");
+    //         Serial.print(u_k_1, 5);
+    //         Serial.print(", ");
+    //         Serial.print(target_vel_rads_2);
+    //         Serial.print(", ");
+    //         Serial.print(motor_true_vels[1] * 2.0 * PI);
+    //         Serial.print(", ");
+    //         Serial.print(u_k_2, 5);
+    //         Serial.print(", ");
+    //         Serial.print(target_vel_rads_3);
+    //         Serial.print(", ");
+    //         Serial.print(motor_true_vels[2] * 2.0 * PI);
+    //         Serial.print(", ");
+    //         Serial.println(u_k_3, 5);
+    //     }
+    // }
+    if ((t > t_total) && (run_flag == 1)){
         controlTimer.end(); // Stop the PI loop interrupt
         send_torque(MOTOR_1, 0);
         send_torque(MOTOR_2, 0);
         send_torque(MOTOR_3, 0);
         idle_motors();
         Serial.println("~~~~~~~~~~Done with test~~~~~~~~~~");
-        flag = 0;
-        }
+        run_flag = 0;
+    }
 }
 
 /*  Function:    print_CAN_frame
@@ -383,56 +388,44 @@ void can_sniff(const CAN_message_t &msg) { // global declaration
 
 // MAIN MOTOR CONTROL LOOP
 void PI_Control_ISR() {
-    // set oscilloscope high to show start of BTI 
-    digitalWriteFast(OSC, HIGH);
-    
+    if (ISR_flag == 1){       
 
-    // Get current velocity of motor 1 for this BTI
-    motor_true_vels[0] = MOTOR_RESET_VAL;
-    demand_encoder(MOTOR_1);
-    while (motor_true_vels[0] == MOTOR_RESET_VAL){} // wait for new data from cansniff
-    float actual_vel_rads_1 = motor_true_vels[0] * 2.0 * PI; // rev/s to rad/s
+        // Get current velocity of motor 1 for this BTI
+        float actual_vel_rads_1 = motor_true_vels[0] * 2.0 * PI; // rev/s to rad/s
 
-    // Get current velocity of motor 2 for this BTI
-    motor_true_vels[1] = MOTOR_RESET_VAL;
-    demand_encoder(MOTOR_2);
-    while (motor_true_vels[1] == MOTOR_RESET_VAL){} // wait for new data from cansniff
-    float actual_vel_rads_2 = motor_true_vels[1] * 2.0 * PI; // rev/s to rad/s
+        // Get current velocity of motor 2 for this BTI
+        float actual_vel_rads_2 = motor_true_vels[1] * 2.0 * PI; // rev/s to rad/s
 
-    // Get current velocity of motor 3 for this BTI
-    motor_true_vels[2] = MOTOR_RESET_VAL;
-    demand_encoder(MOTOR_3);
-    while (motor_true_vels[2] == MOTOR_RESET_VAL){} // wait for new data from cansniff
-    float actual_vel_rads_3 = motor_true_vels[2] * 2.0 * PI; // rev/s to rad/s
+        // Get current velocity of motor 3 for this BTI
+        float actual_vel_rads_3 = motor_true_vels[2] * 2.0 * PI; // rev/s to rad/s
 
-    // Error signal
-    e_k_1 = target_vel_rads_1 - actual_vel_rads_1;
-    e_k_2 = target_vel_rads_2 - actual_vel_rads_2;
-    e_k_3 = target_vel_rads_3 - actual_vel_rads_3;
+        // Error signal
+        e_k_1 = target_vel_rads_1 - actual_vel_rads_1;
+        e_k_2 = target_vel_rads_2 - actual_vel_rads_2;
+        e_k_3 = target_vel_rads_3 - actual_vel_rads_3;
 
-    // Evaluate Tustin difference equation
-    u_k_1 = u_k_1_minus_1 + (b0 * e_k_1) + (b1 * e_k_1_minus_1);
-    u_k_2 = u_k_2_minus_1 + (b0 * e_k_2) + (b1 * e_k_2_minus_1);
-    u_k_3 = u_k_3_minus_1 + (b0 * e_k_3) + (b1 * e_k_3_minus_1);
+        // Evaluate Tustin difference equation
+        u_k_1 = u_k_1_minus_1 + (b0 * e_k_1) + (b1 * e_k_1_minus_1);
+        u_k_2 = u_k_2_minus_1 + (b0 * e_k_2) + (b1 * e_k_2_minus_1);
+        u_k_3 = u_k_3_minus_1 + (b0 * e_k_3) + (b1 * e_k_3_minus_1);
 
-    // Saturate
-    u_k_1 = constrain(u_k_1, -max_torque, max_torque);
-    u_k_2 = constrain(u_k_2, -max_torque, max_torque);
-    u_k_3 = constrain(u_k_3, -max_torque, max_torque);
-    
-    // Send Torque to ODrive
-    send_torque(MOTOR_1, u_k_1);
-    send_torque(MOTOR_2, u_k_2);
-    send_torque(MOTOR_3, u_k_3);
+        // Saturate
+        u_k_1 = constrain(u_k_1, -max_torque, max_torque);
+        u_k_2 = constrain(u_k_2, -max_torque, max_torque);
+        u_k_3 = constrain(u_k_3, -max_torque, max_torque);
+        
+        // Send Torque to ODrive
+        send_torque(MOTOR_1, u_k_1);
+        send_torque(MOTOR_2, u_k_2);
+        send_torque(MOTOR_3, u_k_3);
 
-    // Shift states
-    e_k_1_minus_1 = e_k_1;
-    u_k_1_minus_1 = u_k_1;
-    e_k_2_minus_1 = e_k_2;
-    u_k_2_minus_1 = u_k_2;
-    e_k_3_minus_1 = e_k_3;
-    u_k_3_minus_1 = u_k_3;
-
-    // Set oscilloscope to low to show end of BTI
-    digitalWriteFast(OSC_PIN, LOW);
+        // Shift states
+        e_k_1_minus_1 = e_k_1;
+        u_k_1_minus_1 = u_k_1;
+        e_k_2_minus_1 = e_k_2;
+        u_k_2_minus_1 = u_k_2;
+        e_k_3_minus_1 = e_k_3;
+        u_k_3_minus_1 = u_k_3;
+     
+    }
 }
