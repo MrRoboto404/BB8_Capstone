@@ -48,19 +48,16 @@ int imu_timer_freq = 160; //hz
 int imu_period = 1000000/imu_timer_freq; //convert to seconds, rounds to floor of quintent, us
 
 //____________IMU Filter____________
-const float wb  = 1.1;
-const float tau = 1.0 / wb;
-const float dt  = 1.0 / 160;
-const int CALIB_SAMPLES = 10000; // gyro bias calibration samples
+const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f;          // SparkFun outputs mg -> m/s^2
+const float GYRO_SCALE  = (1.0f / 1000.0f) * PI / 180.0f;  // SparkFun outputs mdps -> rad/s
+const float BETA = 0.041f;                                   // Madgwick tuning param
+Filter imu_filter((float)imu_timer_freq, BETA);
+volatile bool imu_ready = false;
 
-const float ACCEL_SCALE = 0.061e-3 * 9.81;  // ±2g: 0.061 mg/LSB
-const float GYRO_SCALE  = 17.5e-3 * PI/180; // ±500 dps
-
-float pitch_filtered = 0.0;
-float roll_filtered  = 0.0;
-float gx_bias = 0.0;
-float gy_bias = 0.0;
-bool filter_initialized = false;
+// Controller inputs — updated at 160 Hz in loop()
+float filtered_roll  = 0.0f;  // radians
+float filtered_pitch = 0.0f;  // radians
+float gyro_z         = 0.0f;  // rad/s (yaw rate, bias-subtracted)
 
 //____________Switches____________
 Bounce debouncer = Bounce();
@@ -176,6 +173,11 @@ void loop() {
     float gz = gyroData.zData * GYRO_SCALE;
 
     imu_filter.update(gx, gy, gz, ax, ay, az);
+
+    // Store for controller
+    filtered_roll  = imu_filter.getRoll();    // radians
+    filtered_pitch = imu_filter.getPitch();   // radians
+    gyro_z = gz - 0.0001833806f; // yaw rate in rad/s, bias-subtracted
   }
 	
 
