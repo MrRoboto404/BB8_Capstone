@@ -5,6 +5,7 @@
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
 #include <Bounce2.h>
+#include <math.h>
 #include "Filter.h"
 
 
@@ -33,7 +34,7 @@
 //float motor_true_torques; DISABLED, only needed for data collection
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2; // wired to CAN2
 int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
-float motor_true_vels[3]; // index 0 is motor 1, and so on
+volatile float motor_true_vels[3]; // index 0 is motor 1, and so on
 int axis_state = 1; // default to idle
 float vel; // placeholder variables for recieving data from encoders
 
@@ -57,7 +58,30 @@ volatile bool imu_ready = false;
 // Controller inputs — updated at 160 Hz in loop()
 float filtered_roll  = 0.0f;  // radians
 float filtered_pitch = 0.0f;  // radians
+float gyro_x         = 0.0f;  // rad/s
+float gyro_y         = 0.0f;  // rad/s
 float gyro_z         = 0.0f;  // rad/s (yaw rate, bias-subtracted)
+
+//____________LQR & Controller Setup____________
+uint32_t last_time = 0; 
+float phi_x = 0.0;
+float phi_y = 0.0;
+
+// Kinematic Params
+const float rW = 0.048;         // wheel radius (m)
+const float rB = 0.12;          // ball radius (m)
+const float alpha_rad = 0.785;  // 45 degrees
+const float beta_rad = 0.0;     // Alignment offset
+const float MAX_TORQUE = 0.256f;  // N*m
+
+// Precompute constants
+const float SQRT_2 = 1.41421356f;
+const float SQRT_3 = 1.73205081f;
+const float SQRT_6 = 2.44948974f;
+
+// LQR Controller Gains
+const float K_xy[4] = {-1.2527, -140.9692, -3.2801, -70.3089};
+const float K_z[2]  = {-0.9188, -0.9553};
 
 //____________Switches____________
 Bounce debouncer = Bounce();
@@ -92,7 +116,6 @@ void setup() {
 
   // Reset device to default settings
   myISM.deviceReset();
-
   // wait for reset to complete
   while(!myISM.getDeviceReset()){
     delay(1);
@@ -153,15 +176,34 @@ void setup() {
 * @note Errors not yet implemented
 */
 void loop() {
-  /* 
-  controller should create copy of data stored in accelData and gyroData 
-  so that way values are not changing halfway through calculations
-  */
+  // Always listen for CAN events regardless of state
+  Can2.events(); 
 
-  // Update Madgwick filter when ISR has ticked
+  // Detect if control switch has been flicked
+  debouncer.update();
+  if (debouncer.changed()) {
+    // INPUT_PULLUP: LOW = pressed
+    control_run = (debouncer.read() == LOW);
+    
+    if (!control_run) {
+      Serial.println("Control Switch is OFF - Disabling Torques");
+      send_torque(MOTOR_1, 0.0);
+      send_torque(MOTOR_2, 0.0);
+      send_torque(MOTOR_3, 0.0);
+    } else {
+      Serial.println("Control Switch is ON - Engaging LQR");
+      // Reset integration and timing when switched on to prevent jolts
+      phi_x = 0.0;
+      phi_y = 0.0;
+      last_time = micros() - imu_period;
+    }
+  }
+
+  // 160Hz Execution Block triggered by the Timer ISR
   if (imu_ready) {
-    imu_ready = false;
-
+    imu_ready = false; // Reset the flag
+    
+    // Get IMU Data and Filter 
     myISM.getAccel(&accelData);
     myISM.getGyro(&gyroData);
 
@@ -174,34 +216,83 @@ void loop() {
 
     imu_filter.update(gx, gy, gz, ax, ay, az);
 
-    // Store for controller
-    filtered_roll  = imu_filter.getRoll();    // radians
-    filtered_pitch = imu_filter.getPitch();   // radians
-    gyro_z = gz - 0.0001833806f; // yaw rate in rad/s, bias-subtracted
+    // Update global variables for the controller
+    filtered_roll  = imu_filter.getRoll();
+    filtered_pitch = imu_filter.getPitch();
+    gyro_x         = gx;
+    gyro_y         = gy;
+    gyro_z         = gz - 0.0001833806f; // bias-subtracted
+    
+    // 2. Run the controller (Only if the switch is ON)
+    if (control_run){
+      run_controller();
+    }
   }
-	
-
-  // Detect if control switch has been flicked
-  debouncer.update();
-  if (debouncer.changed()) {
-    // INPUT_PULLUP: LOW = pressed
-    control_run = (debouncer.read() == LOW);
-  }
-
-
-  //______Main Loopable stuff______
-  if (control_run){
-    // controller code goes here
-    Can2.events();
-
-    // note: motor velocities are global vars and are updated up to 1kHz automatically
-    // 
-  }
-  else if (!control_run){
-    Serial.println("Control Switch is OFF");
-  }
-
 }
+
+/**
+ * @brief Executes LQR math and outputs torque to the motors
+ */
+void run_controller() {
+  uint32_t current_time = micros();
+  
+  // Calculate dynamic dt
+  float dt = (current_time - last_time) / 1000000.0f;
+  if (last_time == 0) dt = 1.0/160.0; 
+  last_time = current_time;
+
+  // Wheel speeds (psi_dot) - Gear ratio: n=27
+  float psd1 = motor_true_vels[0] / 27.0;
+  float psd2 = motor_true_vels[1] / 27.0;
+  float psd3 = motor_true_vels[2] / 27.0;
+
+  // Trig precalculation
+  float sX = sin(filtered_roll);
+  float cX = cos(filtered_roll);
+  float sY = sin(filtered_pitch);
+  float cY = cos(filtered_pitch);
+
+  // Ball rolling rate (phi_dot)
+  float phi_dot_x = calc_phi_dot_x(psd1, psd2, psd3, gyro_x, sX, cX, sY, cY);
+  float phi_dot_y = calc_phi_dot_y(psd1, psd2, psd3, gyro_y, sX, cX);
+  float phi_dot_z = calc_phi_dot_z(psd1, psd2, psd3, gyro_x, gyro_z, sX, cX, sY, cY);
+
+  // Integrate velocity
+  phi_x += phi_dot_x * dt;
+  phi_y += phi_dot_y * dt;
+
+  // LQR calculation (u = -Kx)
+  float Tx = -(K_xy[0]*phi_x + K_xy[1]*filtered_roll  + K_xy[2]*phi_dot_x + K_xy[3]*gyro_x);
+  float Ty = -(K_xy[0]*phi_y + K_xy[1]*filtered_pitch + K_xy[2]*phi_dot_y + K_xy[3]*gyro_y);
+  float Tz = 0;
+
+  // Torque conversion
+  float cA = cos(alpha_rad);
+  float cB = cos(beta_rad);
+  float sB = sin(beta_rad);
+
+  float T1 = (1.0/(3.0*27)) * (Tz + (2.0/cA) * (Tx * cB - Ty * sB));
+  float T2 = (1.0/(3.0*27)) * (Tz + (1.0/cA) * (sB * (-SQRT_3*Tx + Ty) - cB * (Tx + SQRT_3*Ty)));
+  float T3 = (1.0/(3.0*27)) * (Tz + (1.0/cA) * (sB * (SQRT_3*Tx + Ty) + cB * (-Tx + SQRT_3*Ty)));
+
+  // Applying saturation
+  T1 = constrain(T1, -MAX_TORQUE, MAX_TORQUE);
+  T2 = constrain(T2, -MAX_TORQUE, MAX_TORQUE);
+  T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
+
+  // Command the drives
+  send_torque(MOTOR_1, T1);
+  send_torque(MOTOR_2, T2);
+  send_torque(MOTOR_3, T3);
+
+  // Overrun check
+  uint32_t execution_time = micros() - current_time;
+  if (execution_time > 6250) {
+    Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
+    Serial.println(execution_time);
+  }
+}
+
 
 /**
  * @brief Used to cleanly shutdown components under normal conditions
@@ -294,7 +385,6 @@ void set_motors_states(int axis_state){
     for (int i = 0; i<3; ++i){
         msg.id = MOTOR_IDS[i] | MOTOR_STATE;
         Can2.write(msg);
-        print_CAN_frame(msg);
         delay(10);
     }
 }
@@ -315,8 +405,20 @@ void motors_reset_position(void){
     for (int i = 0; i<3; ++i){
         msg.id = MOTOR_IDS[i] | SET_ABS_POS;
         Can2.write(msg);
-        print_CAN_frame(msg);
         delay(10);
     }
+}
+// ======================= KINEMATIC HELPERS ======================= //
+
+float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
+  return (1.0/(3.0*rB)) * ( (SQRT_6*rW*sX*sY*(-dp2+dp3)) + (SQRT_2*rW*cX*sY*(dp1+dp2+dp3)) + (cY*(SQRT_2*rW*(-2.0*dp1+dp2+dp3) + 3.0*rB*dthx)) );
+}
+
+float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
+  return (1.0/(3.0*rB)) * ( (SQRT_6*rW*cX*(-dp2+dp3)) - (SQRT_2*rW*sX*(dp1+dp2+dp3)) + (3.0*rB*dthy) );
+}
+
+float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, float sX, float cX, float sY, float cY) {
+  return (1.0/(3.0*rB)) * ( (SQRT_2*rW*(cX*cY + 2.0*sY)*dp1) + (SQRT_2*rW*(SQRT_3*cY*sX*(-dp2+dp3) + cX*cY*(dp2+dp3) - sY*(dp2+dp3))) + (3.0*rB*(-sY*dthx + dthz)) );
 }
 
