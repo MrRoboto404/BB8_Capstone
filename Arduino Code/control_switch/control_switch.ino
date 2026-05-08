@@ -11,7 +11,7 @@ void setup() {
     pinMode(SWITCH_PIN, INPUT_PULLUP);
 
     debouncer.attach(SWITCH_PIN);
-    debouncer.interval(25); // debounce time in ms
+    debouncer.interval(2); // debounce time in ms
 }
 
 void loop() {
