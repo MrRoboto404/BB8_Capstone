@@ -74,7 +74,7 @@ const float rW = 0.048;         // wheel radius (m)
 const float rB = 0.12;          // ball radius (m)
 const float alpha_rad = 0.785;  // 45 degrees
 const float beta_rad = 0.0;     // Alignment offset
-const float MAX_TORQUE = 0.24f;  // N*m
+const float MAX_TORQUE = 0.25f;  // N*m
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -82,9 +82,9 @@ const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
 
 // LQR Controller Gains
-const float gain_mod = 0.01;
-// const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
-const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
+const float gain_mod = 0.2;
+const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
+// const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2]  = {gain_mod*-0.9188, gain_mod*-0.9553};
 
 //____________Switches____________
@@ -167,7 +167,7 @@ void setup() {
 
   //______Motor Care______
   motors_reset_position(); // sets absolute positions to 0, even if not needed
-  axis_state = 8; // ready
+  axis_state = 1; // idles
   set_motors_states(axis_state); // change from idle -> ready (flashing green)
 
   /*_________________________SWITCHES_______________________*/
@@ -227,6 +227,8 @@ void loop() {
     } else {
       Serial.println("Control Switch is ON - Engaging LQR");
       // Reset integration and timing when switched on to prevent jolts
+      axis_state = 8; // ready motors
+      set_motors_states(axis_state);
       phi_x = 0.0;
       phi_y = 0.0;
       last_time = micros() - imu_period;
@@ -251,11 +253,11 @@ void loop() {
     imu_filter.update(gx, gy, gz, ax, ay, az);
 
     // Update global variables for the controller
-    filtered_roll  = imu_filter.getRoll();
-    filtered_pitch = imu_filter.getPitch();
-    gyro_x         = gx;
-    gyro_y         = gy;
-    gyro_z         = gz - 0.0001833806f; // bias-subtracted
+    filtered_roll  = -imu_filter.getRoll();
+    filtered_pitch = -imu_filter.getPitch();
+    gyro_x         = -gx;
+    gyro_y         = -gy;
+    gyro_z         = -(gz - 0.0001833806f); // bias-subtracted
 
     /*___WRITE TO SD CARD____*/
     
@@ -319,7 +321,7 @@ void run_controller() {
 
   // LQR calculation (u = -Kx)
   float Tx = -(K_xy[0]*phi_x + K_xy[1]*filtered_roll  + K_xy[2]*phi_dot_x + K_xy[3]*gyro_x);
-  float Ty = -(K_xy[0]*phi_y + K_xy[1]*filtered_pitch + K_xy[2]*phi_dot_y + K_xy[3]*gyro_y);
+  float Ty = (K_xy[0]*phi_y + K_xy[1]*filtered_pitch + K_xy[2]*phi_dot_y + K_xy[3]*gyro_y);
   float Tz = 0;
 
   // Torque conversion
