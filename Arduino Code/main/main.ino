@@ -186,6 +186,12 @@ void setup() {
     Serial.println("FISH");
   }
 
+  SD.remove("roll_data_file.csv");
+  SD.remove("pitch_data_file.csv");
+  SD.remove("gyro_x_data_file.csv");
+  SD.remove("gyro_y_data_file.csv");
+  SD.remove("gyro_z_data_file.csv");
+
   roll_data_file = SD.open("roll_data_file.csv", FILE_WRITE);
   pitch_data_file = SD.open("pitch_data_file.csv", FILE_WRITE);
   gyro_x_data_file = SD.open("gyro_x_data.csv", FILE_WRITE);
@@ -216,6 +222,7 @@ void loop() {
       send_torque(MOTOR_1, 0.0);
       send_torque(MOTOR_2, 0.0);
       send_torque(MOTOR_3, 0.0);
+
       cleanup();
     } else {
       Serial.println("Control Switch is ON - Engaging LQR");
@@ -252,13 +259,20 @@ void loop() {
 
     /*___WRITE TO SD CARD____*/
     
-    pitch_data_file.print(filtered_pitch + "");
+    roll_data_file.print(filtered_roll);
+    roll_data_file.print(", ");
+
+    pitch_data_file.print(filtered_pitch);
+    pitch_data_file.print(", ");
     
+    gyro_x_data_file.print(gyro_x);
+    gyro_x_data_file.print(", ");
     
+    gyro_y_data_file.print(gyro_y);
+    gyro_y_data_file.print(", ");
     
-    
-    
-    
+    gyro_z_data_file.print(gyro_z);
+    gyro_z_data_file.print(", ");
     
     
     
@@ -348,6 +362,15 @@ void cleanup(void){
   set_motors_states(axis_state); // idle
 
   //------IMU Stuff------
+
+
+  //-----SD Card------
+  roll_data_file.close();
+  pitch_data_file.close();
+  gyro_x_data_file.close();
+  gyro_y_data_file.close();
+  gyro_z_data_file.close();
+
 
   //------Acknowledge------
   Serial.println("------------Safely Exited Program------------");
