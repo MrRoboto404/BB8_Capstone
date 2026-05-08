@@ -7,6 +7,8 @@
 #include <Bounce2.h>
 #include <math.h>
 #include "Filter.h"
+#include <SPI.h>
+#include <SD.h>
 
 
 
@@ -51,7 +53,7 @@ int imu_period = 1000000/imu_timer_freq; //convert to seconds, rounds to floor o
 //____________IMU Filter____________
 const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f;          // SparkFun outputs mg -> m/s^2
 const float GYRO_SCALE  = (1.0f / 1000.0f) * PI / 180.0f;  // SparkFun outputs mdps -> rad/s
-const float BETA = 0.041f;                                   // Madgwick tuning param
+const float BETA = 0.02f;                                   // Madgwick tuning param
 Filter imu_filter((float)imu_timer_freq, BETA);
 volatile bool imu_ready = false;
 
@@ -72,7 +74,7 @@ const float rW = 0.048;         // wheel radius (m)
 const float rB = 0.12;          // ball radius (m)
 const float alpha_rad = 0.785;  // 45 degrees
 const float beta_rad = 0.0;     // Alignment offset
-const float MAX_TORQUE = 0.256f;  // N*m
+const float MAX_TORQUE = 0.24f;  // N*m
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -80,12 +82,23 @@ const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
 
 // LQR Controller Gains
-const float K_xy[4] = {-1.2527, -140.9692, -3.2801, -70.3089};
-const float K_z[2]  = {-0.9188, -0.9553};
+const float gain_mod = 0.01;
+// const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
+const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
+const float K_z[2]  = {gain_mod*-0.9188, gain_mod*-0.9553};
 
 //____________Switches____________
 Bounce debouncer = Bounce();
 bool control_run = false; // false by default
+
+// SD Card Data
+File roll_data_file;
+File pitch_data_file;
+File gyro_x_data_file;
+File gyro_y_data_file;
+File gyro_z_data_file;
+
+
 
 
 
@@ -138,7 +151,6 @@ void setup() {
 
   /*____________________________IMU CALIBRATION____________________________*/
   // Keep IMU perfectly still during this period
-  Serial.println("Calibrating, keep still Ryan");
   imu_filter.begin();
   imu_filter.setBias(0.0062981257f, -0.0121280579f, 0.0001833806f); 
 
@@ -166,6 +178,20 @@ void setup() {
 
   /*_________________________ACK SETUP_______________________*/
   Serial.println("------------Completed Setup.------------");
+
+  /*_______________SD CARD SETUP_____________________________*/
+  Serial.println("Starting SD card");
+
+  while(!SD.begin(10)){
+    Serial.println("FISH");
+  }
+
+  roll_data_file = SD.open("roll_data_file.csv", FILE_WRITE);
+  pitch_data_file = SD.open("pitch_data_file.csv", FILE_WRITE);
+  gyro_x_data_file = SD.open("gyro_x_data.csv", FILE_WRITE);
+  gyro_y_data_file = SD.open("gyro_y_data.csv", FILE_WRITE);
+  gyro_z_data_file = SD.open("gyro_z_data.csv", FILE_WRITE);
+
 }
 
 /** 
@@ -190,6 +216,7 @@ void loop() {
       send_torque(MOTOR_1, 0.0);
       send_torque(MOTOR_2, 0.0);
       send_torque(MOTOR_3, 0.0);
+      cleanup();
     } else {
       Serial.println("Control Switch is ON - Engaging LQR");
       // Reset integration and timing when switched on to prevent jolts
@@ -222,6 +249,21 @@ void loop() {
     gyro_x         = gx;
     gyro_y         = gy;
     gyro_z         = gz - 0.0001833806f; // bias-subtracted
+
+    /*___WRITE TO SD CARD____*/
+    
+    pitch_data_file.print(filtered_pitch + "");
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // 2. Run the controller (Only if the switch is ON)
     if (control_run){
@@ -281,9 +323,9 @@ void run_controller() {
   T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
 
   // Command the drives
-  send_torque(MOTOR_1, T1);
-  send_torque(MOTOR_2, T2);
-  send_torque(MOTOR_3, T3);
+  send_torque(MOTOR_1, 1*T1);
+  send_torque(MOTOR_2, 1*T2);
+  send_torque(MOTOR_3, 1*T3);
 
   // Overrun check
   uint32_t execution_time = micros() - current_time;
