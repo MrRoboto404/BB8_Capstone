@@ -28,8 +28,17 @@
 #define GET_ENCODER (0x09)
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
+#define GET_ERROR (0x03)
+#define CLEAR_ERRORS (0x018)
 // Control loop switch
 #define SWITCH_PIN 14
+// ODrive error codes
+#define ERROR_OVERVOLTAGE (0x00000100)
+#define ERROR_UNDERVOLTAGE (0x00000200)
+#define ERROR_DC_OVERCURRENT (0x00000400)
+#define ERROR_OVERREGEN (0x00000800)
+#define ERROR_OVERCURRENT (0x00001000)
+
 
 //------Global Variables------
 //____________CAN____________
@@ -39,6 +48,7 @@ int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
 volatile float motor_true_vels[3]; // index 0 is motor 1, and so on
 int axis_state = 1; // default to idle
 float vel; // placeholder variables for recieving data from encoders
+bool errored = false;
 
 
 //____________IMU____________
@@ -104,7 +114,7 @@ File gyro_z_data_file;
 
 /*========================DEFINITIONS========================*/
 
-// Core stuff
+//==============Core stuff==============
 
 /**
  * @brief Initializes IMU communication, CAN communication, motor states,
@@ -219,13 +229,13 @@ void loop() {
     
     if (!control_run) {
       Serial.println("Control Switch is OFF - Disabling Torques");
-      send_torque(MOTOR_1, 0.0);
-      send_torque(MOTOR_2, 0.0);
-      send_torque(MOTOR_3, 0.0);
-
-      cleanup();
-    } else {
+      shutdown(false); // not an error, normal shutdown
+    } 
+    else {
       Serial.println("Control Switch is ON - Engaging LQR");
+      clear_errors(); // clear any existing errors on the motors
+      errored = false;
+
       // Reset integration and timing when switched on to prevent jolts
       axis_state = 8; // ready motors
       set_motors_states(axis_state);
@@ -353,15 +363,21 @@ void run_controller() {
 
 
 /**
- * @brief Used to cleanly shutdown components under normal conditions
+ * @brief Used to cleanly shutdown components under normal or errorconditions
  * 
  * @note Prints to serial
  */
-void cleanup(void){
-  Serial.println("------------Safe Exit Requested------------");
+void shutdown(bool errored){
+  Serial.println("------------Exit Requested------------");
   //------Motors------
-  axis_state = 1;
-  set_motors_states(axis_state); // idle
+  send_torque(MOTOR_1, 0.0);
+  send_torque(MOTOR_2, 0.0);
+  send_torque(MOTOR_3, 0.0);
+  
+  if (!errored){
+    axis_state = 1;
+    set_motors_states(axis_state); // idle
+  }
 
   //------IMU Stuff------
 
@@ -378,7 +394,7 @@ void cleanup(void){
   Serial.println("------------Safely Exited Program------------");
 }
 
-// IMU stuff
+//==============IMU stuff==============
 
 /*
 Behavior: interrupt service routine that runs every time the imu timer ends
@@ -390,7 +406,7 @@ void IMU_ISR(){
   imu_ready = true;
 }
 
-//======CAN stuff======
+//==============CAN stuff==============
 /**
  * @brief Translates incoming CAN messages. Right now, just the required motor velocities are decoded.
  * 
@@ -415,6 +431,37 @@ void can_sniff(const CAN_message_t &msg) {
         // Use an array to map node numbers to velocity variables
         motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
     }
+    else if (cmd == GET_ERROR){
+      // error detected, kill ISR if it hasn't already done so
+      if (!errored){
+        shutdown(true);
+        errored = true;
+        Serial.println("!!!!!!!!!!!!ERROR DETECTED!!!!!!!!!!!!");
+      }
+
+      // print error message(s)
+      uint32_t errors = *reinterpret_cast<const uint32_t*>(msg.buf);
+      Serial.print("Motor ");
+      Serial.print(node);
+      Serial.println(":");
+      if (errors & ERROR_OVERVOLTAGE){
+          Serial.println("  - OVERVOLTAGE");
+      }
+      if (errors & ERROR_UNDERVOLTAGE){
+          Serial.println("  - UNDERVOLTAGE");
+      }
+      if (errors & ERROR_DC_OVERCURRENT){
+          Serial.println("  - DC_OVERCURRENT");
+      }
+      if (errors & ERROR_OVERREGEN){
+          Serial.println("  - OVER_REGEN");
+      }
+      if (errors & ERROR_OVERCURRENT){
+          Serial.println("  - OVERCURRENT");
+      }
+      Serial.println();
+      
+    }
     
 }
 
@@ -425,8 +472,6 @@ void can_sniff(const CAN_message_t &msg) {
  * @param torque Desired motor torque in N*m
  * 
  * @return None
- * 
- * @note Prints error message to serial if unable to send frame.
  */
 void send_torque(int MOTOR, float torque){
     CAN_message_t msg;
@@ -434,6 +479,18 @@ void send_torque(int MOTOR, float torque){
     msg.len = 4;
     memcpy(msg.buf, &torque, 4);
     Can2.write(msg);
+}
+
+void clear_errors(void){
+  CAN_message_t msg;
+    msg.len = 4;
+    bool flash = true; // flashes when identifying
+    memcpy(msg.buf, &flash, 4);
+    for (int i = 0; i<3; ++i){
+        msg.id = MOTOR_IDS[i] | CLEAR_ERRORS;
+        Can2.write(msg);
+        delay(10);
+    }
 }
 
 /**
@@ -446,7 +503,6 @@ void send_torque(int MOTOR, float torque){
  */
 void set_motors_states(int axis_state){
     CAN_message_t msg;
-    msg.id = MOTOR_1 | MOTOR_STATE;
     msg.len = 4;
     memcpy(msg.buf, &axis_state, 4);
     for (int i = 0; i<3; ++i){
@@ -466,7 +522,6 @@ void set_motors_states(int axis_state){
 void motors_reset_position(void){
     float set_zero = 0;
     CAN_message_t msg;
-    msg.id = MOTOR_1 | SET_ABS_POS;
     msg.len = 4;
     memcpy(msg.buf, &set_zero, 4);
     for (int i = 0; i<3; ++i){
@@ -475,8 +530,9 @@ void motors_reset_position(void){
         delay(10);
     }
 }
-// ======================= KINEMATIC HELPERS ======================= //
 
+
+//==============KINEMATIC HELPERS==============
 float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
   return (1.0/(3.0*rB)) * ( (SQRT_6*rW*sX*sY*(-dp2+dp3)) + (SQRT_2*rW*cX*sY*(dp1+dp2+dp3)) + (cY*(SQRT_2*rW*(-2.0*dp1+dp2+dp3) + 3.0*rB*dthx)) );
 }
