@@ -32,7 +32,7 @@ float motor_torq_commands[3];
 uint8_t node, cmd;
 
 int runcount = 0;
-int t_total = 2;
+int t_total = 5;
 float frequency = 0.9; // Hz, cannot exceed 0.9
 float peak_torque = 0.1; // N*m, don't change
 int run_flag = 1;
@@ -88,7 +88,7 @@ void setup() {
 
     // Start CAN bus
     Can2.begin();
-    Can2.setBaudRate(1000000);
+    Can2.setBaudRate(500000);
 
     // Enable reading the CAN bus
     // Upon recieving a message, sniff
