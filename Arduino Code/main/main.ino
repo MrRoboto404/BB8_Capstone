@@ -93,11 +93,11 @@ const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
 
 // LQR Controller Gains
-const float gain_mod = 0.2;
-// const float K_xy[4] = {0,  -29.6151,   -0.5554,  -14.6805};
-const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
+// const float gain_mod = 0.2;
+const float K_xy[4] = {0,  -29.6151,   -0.5554,  -14.6805};
+// const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
-const float K_z[2]  = {gain_mod*-0.9188, gain_mod*-0.9553};
+const float K_z[2]  = {-1, -1.0357};
 
 //____________Switches____________
 Bounce debouncer = Bounce();
@@ -334,7 +334,7 @@ void run_controller() {
   // LQR calculation (u = -Kx)
   float Tx = -(K_xy[0]*phi_x + K_xy[1]*filtered_roll  + K_xy[2]*phi_dot_x + K_xy[3]*gyro_x);
   float Ty = (K_xy[0]*phi_y + K_xy[1]*filtered_pitch + K_xy[2]*phi_dot_y + K_xy[3]*gyro_y);
-  float Tz = 0;
+  float Tz = (K_z[1]*gyro_z);
 
   // Torque conversion
   float cA = cos(alpha_rad);
