@@ -33,7 +33,7 @@
 // Control loop switch
 #define SWITCH_PIN 14
 // ODrive error codes
-#define ERROR_ESTOP_REQ (0x02)
+#define ERROR_ESTOP_REQ (0x00000002)
 #define ERROR_OVERVOLTAGE (0x00000100)
 #define ERROR_UNDERVOLTAGE (0x00000200)
 #define ERROR_DC_OVERCURRENT (0x00000400)
@@ -94,8 +94,8 @@ const float SQRT_6 = 2.44948974f;
 
 // LQR Controller Gains
 const float gain_mod = 0.2;
-const float K_xy[4] = {-0.2000,  -29.6151,   -0.5554,  -14.6805};
-// const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
+// const float K_xy[4] = {0,  -29.6151,   -0.5554,  -14.6805};
+const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2]  = {gain_mod*-0.9188, gain_mod*-0.9553};
 
@@ -231,7 +231,7 @@ void loop() {
     
     if (!control_run) {
       Serial.println("Control Switch is OFF - Disabling Torques");
-      shutdown(false); // not an error, normal shutdown
+      shutdown(); 
     } 
     else {
       Serial.println("Control Switch is ON - Engaging LQR");
@@ -369,17 +369,15 @@ void run_controller() {
  * 
  * @note Prints to serial
  */
-void shutdown(bool errored){
+void shutdown(){
   Serial.println("------------Exit Requested------------");
   //------Motors------
   send_torque(MOTOR_1, 0.0);
   send_torque(MOTOR_2, 0.0);
   send_torque(MOTOR_3, 0.0);
-  
-  if (!errored){
-    axis_state = 1;
-    set_motors_states(axis_state); // idle
-  }
+
+  axis_state = 1;
+  set_motors_states(axis_state); // idle
 
   //------IMU Stuff------
 
@@ -435,7 +433,8 @@ void can_sniff(const CAN_message_t &msg) {
     }
     else if (cmd == GET_ERROR){
       // ignore cyclic message if it is zero
-      uint32_t errors = *reinterpret_cast<const uint32_t*>(msg.buf);
+      uint32_t errors_raw = *reinterpret_cast<const uint32_t*>(msg.buf+4);
+      uint32_t errors  = __builtin_bswap32(errors_raw); // swap for endianness
       if (errors == 0) {
           // No error → ignore completely
           return;
@@ -443,8 +442,7 @@ void can_sniff(const CAN_message_t &msg) {
 
       // error detected, kill ISR if it hasn't already done so. print once
       if (!errored){
-        shutdown(true);
-        errored = true;
+        shutdown();
         Serial.println("!!!!!!!!!!!!ERROR DETECTED!!!!!!!!!!!!");
       }
       
