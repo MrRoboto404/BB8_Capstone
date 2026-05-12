@@ -33,6 +33,7 @@
 // Control loop switch
 #define SWITCH_PIN 14
 // ODrive error codes
+#define ERROR_ESTOP_REQ (0x02)
 #define ERROR_OVERVOLTAGE (0x00000100)
 #define ERROR_UNDERVOLTAGE (0x00000200)
 #define ERROR_DC_OVERCURRENT (0x00000400)
@@ -84,7 +85,7 @@ const float rW = 0.048;         // wheel radius (m)
 const float rB = 0.12;          // ball radius (m)
 const float alpha_rad = 0.785;  // 45 degrees
 const float beta_rad = 0.0;     // Alignment offset
-const float MAX_TORQUE = 0.25f;  // N*m
+const float MAX_TORQUE = 0.20f;  // N*m
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -93,7 +94,8 @@ const float SQRT_6 = 2.44948974f;
 
 // LQR Controller Gains
 const float gain_mod = 0.2;
-const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
+const float K_xy[4] = {-0.2000,  -29.6151,   -0.5554,  -14.6805};
+// const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2]  = {gain_mod*-0.9188, gain_mod*-0.9553};
 
@@ -190,23 +192,23 @@ void setup() {
   Serial.println("------------Completed Setup.------------");
 
   /*_______________SD CARD SETUP_____________________________*/
-  Serial.println("Starting SD card");
+  // Serial.println("Starting SD card");
 
-  while(!SD.begin(10)){
-    Serial.println("FISH");
-  }
+  // while(!SD.begin(10)){
+  //   Serial.println("FISH");
+  // }
 
-  SD.remove("roll_data_file.csv");
-  SD.remove("pitch_data_file.csv");
-  SD.remove("gyro_x_data_file.csv");
-  SD.remove("gyro_y_data_file.csv");
-  SD.remove("gyro_z_data_file.csv");
+  // SD.remove("roll_data_file.csv");
+  // SD.remove("pitch_data_file.csv");
+  // SD.remove("gyro_x_data_file.csv");
+  // SD.remove("gyro_y_data_file.csv");
+  // SD.remove("gyro_z_data_file.csv");
 
-  roll_data_file = SD.open("roll_data_file.csv", FILE_WRITE);
-  pitch_data_file = SD.open("pitch_data_file.csv", FILE_WRITE);
-  gyro_x_data_file = SD.open("gyro_x_data.csv", FILE_WRITE);
-  gyro_y_data_file = SD.open("gyro_y_data.csv", FILE_WRITE);
-  gyro_z_data_file = SD.open("gyro_z_data.csv", FILE_WRITE);
+  // roll_data_file = SD.open("roll_data_file.csv", FILE_WRITE);
+  // pitch_data_file = SD.open("pitch_data_file.csv", FILE_WRITE);
+  // gyro_x_data_file = SD.open("gyro_x_data.csv", FILE_WRITE);
+  // gyro_y_data_file = SD.open("gyro_y_data.csv", FILE_WRITE);
+  // gyro_z_data_file = SD.open("gyro_z_data.csv", FILE_WRITE);
 
 }
 
@@ -271,20 +273,20 @@ void loop() {
 
     /*___WRITE TO SD CARD____*/
     
-    roll_data_file.print(filtered_roll);
-    roll_data_file.print(", ");
+    // roll_data_file.print(filtered_roll);
+    // roll_data_file.print(", ");
 
-    pitch_data_file.print(filtered_pitch);
-    pitch_data_file.print(", ");
+    // pitch_data_file.print(filtered_pitch);
+    // pitch_data_file.print(", ");
     
-    gyro_x_data_file.print(gyro_x);
-    gyro_x_data_file.print(", ");
+    // gyro_x_data_file.print(gyro_x);
+    // gyro_x_data_file.print(", ");
     
-    gyro_y_data_file.print(gyro_y);
-    gyro_y_data_file.print(", ");
+    // gyro_y_data_file.print(gyro_y);
+    // gyro_y_data_file.print(", ");
     
-    gyro_z_data_file.print(gyro_z);
-    gyro_z_data_file.print(", ");
+    // gyro_z_data_file.print(gyro_z);
+    // gyro_z_data_file.print(", ");
     
     
     
@@ -383,11 +385,11 @@ void shutdown(bool errored){
 
 
   //-----SD Card------
-  roll_data_file.close();
-  pitch_data_file.close();
-  gyro_x_data_file.close();
-  gyro_y_data_file.close();
-  gyro_z_data_file.close();
+  // roll_data_file.close();
+  // pitch_data_file.close();
+  // gyro_x_data_file.close();
+  // gyro_y_data_file.close();
+  // gyro_z_data_file.close();
 
 
   //------Acknowledge------
@@ -432,33 +434,45 @@ void can_sniff(const CAN_message_t &msg) {
         motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
     }
     else if (cmd == GET_ERROR){
-      // error detected, kill ISR if it hasn't already done so
+      // ignore cyclic message if it is zero
+      uint32_t errors = *reinterpret_cast<const uint32_t*>(msg.buf);
+      if (errors == 0) {
+          // No error → ignore completely
+          return;
+      }
+
+      // error detected, kill ISR if it hasn't already done so. print once
       if (!errored){
         shutdown(true);
         errored = true;
         Serial.println("!!!!!!!!!!!!ERROR DETECTED!!!!!!!!!!!!");
       }
-
+      
       // print error message(s)
-      uint32_t errors = *reinterpret_cast<const uint32_t*>(msg.buf);
       Serial.print("Motor ");
       Serial.print(node);
       Serial.println(":");
       if (errors & ERROR_OVERVOLTAGE){
-          Serial.println("  - OVERVOLTAGE");
+        Serial.println("  - OVERVOLTAGE");
       }
       if (errors & ERROR_UNDERVOLTAGE){
-          Serial.println("  - UNDERVOLTAGE");
+        Serial.println("  - UNDERVOLTAGE");
       }
       if (errors & ERROR_DC_OVERCURRENT){
-          Serial.println("  - DC_OVERCURRENT");
+        Serial.println("  - DC_OVERCURRENT");
       }
       if (errors & ERROR_OVERREGEN){
-          Serial.println("  - OVER_REGEN");
+        Serial.println("  - OVER_REGEN");
       }
       if (errors & ERROR_OVERCURRENT){
-          Serial.println("  - OVERCURRENT");
+        Serial.println("  - OVERCURRENT");
       }
+      if (errors & ERROR_ESTOP_REQ){
+        Serial.println("  - ESTOP REQ");
+      }
+
+
+
       Serial.println();
       
     }
@@ -484,7 +498,7 @@ void send_torque(int MOTOR, float torque){
 void clear_errors(void){
   CAN_message_t msg;
     msg.len = 4;
-    bool flash = true; // flashes when identifying
+    int flash = 0; // flashes when identifying. 0 = no, 1 = true
     memcpy(msg.buf, &flash, 4);
     for (int i = 0; i<3; ++i){
         msg.id = MOTOR_IDS[i] | CLEAR_ERRORS;
