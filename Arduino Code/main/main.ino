@@ -40,7 +40,7 @@
 #define ERROR_OVERREGEN (0x00000800)
 #define ERROR_OVERCURRENT (0x00001000)
 // Oscilloscope
-#define OSC_PIN 17
+#define OSC_PIN 16
 
 
 //------Global Variables------
@@ -192,7 +192,7 @@ void setup() {
   debouncer.attach(SWITCH_PIN);
   debouncer.interval(2); // debounce time, in ms
 
-  pinMode(OSC_PIN, INPUT_PULLUP);
+  pinMode(OSC_PIN, OUTPUT);
 
 
   /*_________________________ACK SETUP_______________________*/
@@ -313,15 +313,9 @@ void loop() {
 void run_controller() {
   uint32_t current_time = micros();
 
-  // Invert state of oscilloscope pin. this should have a freq of 1 BTI (or garbini said half)
-  if (osc_state){
-    osc_state = false;
-    digitalWriteFast(OSC_PIN, LOW);
-  }
-  else{
-    osc_state = true;
-    digitalWriteFast(OSC_PIN, HIGH);
-  }
+  // Invert state of oscilloscope pin. this should have a freq of 1 BTI
+  osc_state = !osc_state;
+  digitalWriteFast(OSC_PIN, osc_state);
   
   // Calculate dynamic dt
   float dt = (current_time - last_time) / 1000000.0f;
