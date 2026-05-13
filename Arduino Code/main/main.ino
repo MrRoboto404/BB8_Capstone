@@ -39,6 +39,8 @@
 #define ERROR_DC_OVERCURRENT (0x00000400)
 #define ERROR_OVERREGEN (0x00000800)
 #define ERROR_OVERCURRENT (0x00001000)
+// Oscilloscope
+#define OSC_PIN 17
 
 
 //------Global Variables------
@@ -103,12 +105,15 @@ const float K_z[2]  = {-1, -1.0357};
 Bounce debouncer = Bounce();
 bool control_run = false; // false by default
 
-// SD Card Data
+//____________SD Card Data____________
 File roll_data_file;
 File pitch_data_file;
 File gyro_x_data_file;
 File gyro_y_data_file;
 File gyro_z_data_file;
+
+//____________Oscilloscope Verification____________
+bool osc_state = false;
 
 
 
@@ -186,6 +191,8 @@ void setup() {
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   debouncer.attach(SWITCH_PIN);
   debouncer.interval(2); // debounce time, in ms
+
+  pinMode(OSC_PIN, INPUT_PULLUP);
 
 
   /*_________________________ACK SETUP_______________________*/
@@ -305,6 +312,16 @@ void loop() {
  */
 void run_controller() {
   uint32_t current_time = micros();
+
+  // Invert state of oscilloscope pin. this should have a freq of 1 BTI (or garbini said half)
+  if (osc_state){
+    osc_state = false;
+    digitalWriteFast(OSC_PIN, LOW);
+  }
+  else{
+    osc_state = true;
+    digitalWriteFast(OSC_PIN, HIGH);
+  }
   
   // Calculate dynamic dt
   float dt = (current_time - last_time) / 1000000.0f;
