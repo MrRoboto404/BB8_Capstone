@@ -205,6 +205,7 @@ void setup() {
 
   while(!SD.begin(10)){
     Serial.println("FISH");
+    delay(100);
   }
 
   Serial.println("CAUGHT SOME FISH!");
@@ -366,11 +367,7 @@ void shutdown(){
 
 
   //_____ SD CARD SHUTDOWN _____________
-  save_data_2_SD("roll.csv", 0.018);
-  save_data_2_SD("pitch.csv", 3);
-  save_data_2_SD("gyroX.csv", 3);
-  save_data_2_SD("gyroY.csv", 1.4);
-  save_data_2_SD("gyroZ.csv", 0.01);
+  save_data_2_SD();
 
 
   //------Acknowledge------
@@ -542,13 +539,16 @@ float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, fl
 
 
 // SD Card Helpers
-void save_data_2_SD(String file_name, float data){
-  File my_file = SD.open("FILE", FILE_WRITE);
+void save_data_2_SD(){
+  File my_file = SD.open("FILE.csv", FILE_WRITE);
 
   //string string_Data = String(data);
 
-  my_file.println(data);
+  my_file.println(5);
+  my_file.print(",");
+  myfile.println(5.46);
   my_file.print(",");
 
   my_file.close();
+  Serial.println("REMOVE THE DAGGER");
 }
