@@ -13,7 +13,6 @@
 
 
 
-
 /*========================GLOBAL DECLARATIONS========================*/
 //____________CAN Setup____________
 
@@ -103,15 +102,6 @@ const float K_z[2]  = {-1, -1.0357};
 Bounce debouncer = Bounce();
 bool control_run = false; // false by default
 
-// SD Card Data
-File roll_data_file;
-File pitch_data_file;
-File gyro_x_data_file;
-File gyro_y_data_file;
-File gyro_z_data_file;
-
-
-
 
 
 /*========================DEFINITIONS========================*/
@@ -192,24 +182,13 @@ void setup() {
   Serial.println("------------Completed Setup.------------");
 
   /*_______________SD CARD SETUP_____________________________*/
-  // Serial.println("Starting SD card");
+  Serial.println("Starting SD card");
 
-  // while(!SD.begin(10)){
-  //   Serial.println("FISH");
-  // }
+  while(!SD.begin(10)){
+    Serial.println("FISH");
+  }
 
-  // SD.remove("roll_data_file.csv");
-  // SD.remove("pitch_data_file.csv");
-  // SD.remove("gyro_x_data_file.csv");
-  // SD.remove("gyro_y_data_file.csv");
-  // SD.remove("gyro_z_data_file.csv");
-
-  // roll_data_file = SD.open("roll_data_file.csv", FILE_WRITE);
-  // pitch_data_file = SD.open("pitch_data_file.csv", FILE_WRITE);
-  // gyro_x_data_file = SD.open("gyro_x_data.csv", FILE_WRITE);
-  // gyro_y_data_file = SD.open("gyro_y_data.csv", FILE_WRITE);
-  // gyro_z_data_file = SD.open("gyro_z_data.csv", FILE_WRITE);
-
+  Serial.println("CAUGHT SOME FISH!");
 }
 
 /** 
@@ -270,25 +249,6 @@ void loop() {
     gyro_x         = -gx;
     gyro_y         = -gy;
     gyro_z         = -(gz - 0.0001833806f); // bias-subtracted
-
-    /*___WRITE TO SD CARD____*/
-    
-    // roll_data_file.print(filtered_roll);
-    // roll_data_file.print(", ");
-
-    // pitch_data_file.print(filtered_pitch);
-    // pitch_data_file.print(", ");
-    
-    // gyro_x_data_file.print(gyro_x);
-    // gyro_x_data_file.print(", ");
-    
-    // gyro_y_data_file.print(gyro_y);
-    // gyro_y_data_file.print(", ");
-    
-    // gyro_z_data_file.print(gyro_z);
-    // gyro_z_data_file.print(", ");
-    
-    
     
     
     
@@ -382,12 +342,12 @@ void shutdown(){
   //------IMU Stuff------
 
 
-  //-----SD Card------
-  // roll_data_file.close();
-  // pitch_data_file.close();
-  // gyro_x_data_file.close();
-  // gyro_y_data_file.close();
-  // gyro_z_data_file.close();
+  //_____ SD CARD SHUTDOWN _____________
+  save_data_2_SD("roll.csv", 0.018);
+  save_data_2_SD("pitch.csv", 3);
+  save_data_2_SD("gyroX.csv", 3);
+  save_data_2_SD("gyroY.csv", 1.4);
+  save_data_2_SD("gyroZ.csv", 0.01);
 
 
   //------Acknowledge------
@@ -557,3 +517,15 @@ float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, fl
   return (1.0/(3.0*rB)) * ( (SQRT_2*rW*(cX*cY + 2.0*sY)*dp1) + (SQRT_2*rW*(SQRT_3*cY*sX*(-dp2+dp3) + cX*cY*(dp2+dp3) - sY*(dp2+dp3))) + (3.0*rB*(-sY*dthx + dthz)) );
 }
 
+
+// SD Card Helpers
+void save_data_2_SD(String file_name, float data){
+  File my_file = SD.open("FILE", FILE_WRITE);
+
+  //string string_Data = String(data);
+
+  my_file.println(data);
+  my_file.print(",");
+
+  my_file.close();
+}

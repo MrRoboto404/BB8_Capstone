@@ -11,14 +11,16 @@ void setup() {
 
   while(!SD.begin(10)){
     Serial.println("FISH");
+    delay(100);
   }
 
   // checking the write ability
   Serial.println("WE OPENING THE CARD NOW");
-  myFile = SD.open("test2.txt", FILE_WRITE);
+  myFile = SD.open("test.csv", FILE_WRITE);
   if(myFile){
     Serial.println("WRITING LIKE SHAKESPEARE");
-    myFile.println("RYAN WHAT DID YOU DO!");
+    myFile.println("3,");
+    myFile.println("5,");
     myFile.close();
     Serial.println("Masterpiece created");
   } else {
@@ -27,7 +29,7 @@ void setup() {
 
   // checking the read ability
   Serial.println("OH MY OPENING THE CARD");
-  myFile = SD.open("test2.txt");
+  myFile = SD.open("test.csv");
   if(myFile){
     Serial.println("READ LIKE A BOOKWORM");
 
@@ -38,6 +40,8 @@ void setup() {
   } else {
     Serial.println("I can't read");
   }
+
+  Serial.println("Eject Card Now!");
 }
 
 void loop() {
