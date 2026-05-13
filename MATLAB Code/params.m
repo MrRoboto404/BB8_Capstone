@@ -2,27 +2,38 @@ function p = params()
 % BALLBOT_PARAMS  Parameters for planar ballbot model (1D)
 %USE SI UNITS - starting 
 
+% This struct is initallized to resolve the problems simulating non-linear
+% model.
+p = struct(...
+    'm_ball', 0, 'm_body', 0, 'm_omni', 0, ...
+    'r_ball', 0, 'r_omni', 0, 'r_body', 0, 'h_body', 0, 'l', 0, ...
+    'alpha', 0, 'beta', 0, 'g', 0, 'i_Gear', 0, ...
+    'Theta_motor_rotor', 0, 'Theta_ball', 0, 'Theta_omni', 0, ...
+    'Theta_body_vertical', 0, 'Theta_virt_vertical', 0, ...
+    'm_virt', 0, 'Theta_virt_xy', 0, 'Theta_body_xy', 0);
+
 % VARIABLE properties %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %_______Masses_______
-p.m_ball = 2.29;   %kg, Mass of the Ball
-p.m_body = 9.2;    %kg, Mass of the body
-p.m_omni = 4; %kg, reverse engineered from inertia given
+p.m_ball = 2.7;   %kg, Mass of the Ball
+p.m_body = 7.865;    %kg, Mass of the body
+p.m_omni = 0.119; %kg, reverse engineered from inertia given
 
 %_______Lengths_______
-p.r_ball = .125;   %m, Radius of the ball
-p.r_omni= .06;    %m, radius of the OMNIWHEELS, NOT VIRTUAL
+p.r_ball = .108;   %m, Radius of the ball
+p.r_omni= .048;    %m, radius of the OMNIWHEELS, NOT VIRTUAL
 p.r_body = 0.1;     %m, radius of the body (cylinder)
 
 p.h_body = 0.894;  %m, height of the body (cylinder). Reverse engineered from interia calcs
-p.l = 0.339;     %m, Height of the center of gravity of body from center of ball
+p.l = 0.205;     %m, Height of the center of gravity of body from center of ball
 
 %_______Angle of wheels on ball_______
-p.alpha = deg2rad(45); %rad
+p.alpha = deg2rad(50); %rad
 p.beta = deg2rad(0); %rad, taken from +X axis (adds intervals for other locations)
 
 %_______Misc_______
 p.g = 9.81;     % m/s^2, Gravitational acceleration
-p.i_Gear = 26;  % -, Gear ratio
+p.i_Gear = 27;  % -, Gear ratio from most recent motor (57BYA74-24-01-PG27)
+p.K_T = 0.04813; %Nm/A, motor torque constant from """""
 
 %_______Inertia Constants_______
 p.Theta_motor_rotor = 3.33 * 10^-6; % rotor intertia (real small)
