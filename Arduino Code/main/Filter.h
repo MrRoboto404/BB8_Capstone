@@ -12,7 +12,6 @@ public:
     void begin();
 
     // Set/change tuning parameter. Higher = faster correction, more noise.
-    // Typical range: 0.02 (conservative) to 0.3 (aggressive). Default: 0.086
     void setBeta(float beta);
 
     // Update filter with a new IMU sample.
