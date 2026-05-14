@@ -118,8 +118,9 @@ const float CSC_35 = 1.74344679f; // 1.0 / sin(35 deg)
 const float SEC_35 = 1.22077458f; // 1.0 / cos(35 deg)
 
 // LQR Controller Gains
-const float gain_mod = 0.4;
-const float K_xy[4] = { 0, -gain_mod*29.6151, -gain_mod*0.5554, -gain_mod*14.6805 };
+const float gain_mod = 0.65;
+const float gain_mod_2 = 0.35;
+const float K_xy[4] = { 0, -gain_mod*29.6151, -gain_mod*0.5554, -gain_mod_2*14.6805 };
 // const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2] = { -1, -1.0357 };
