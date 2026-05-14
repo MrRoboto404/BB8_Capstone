@@ -175,6 +175,11 @@ void setup() {
   myISM.setGyroDataRate(ISM_GY_ODR_208Hz);
   myISM.setGyroFullScale(ISM_500dps);
 
+	// Enable hardware low-pass filters
+	myISM.setGyroFilterLP1(true);
+	myISM.setGyroLP1Bandwidth(ISM_VERY_LIGHT);  // ~58 Hz cutoff at 208 Hz ODR
+	myISM.setAccelSlopeFilter(ISM_LP_ODR_DIV_10);  // accel LPF at ODR/10 ≈ 21 Hz
+
   /*____________________________IMU CALIBRATION____________________________*/
   // Keep IMU perfectly still during this period
   imu_filter.begin();
