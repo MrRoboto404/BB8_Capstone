@@ -15,8 +15,6 @@
 
 /*========================GLOBAL DECLARATIONS========================*/
 //____________CAN Setup____________
-
-
 //------Constants------
 // CAN IDs correctly bit-shifted
 #define MOTOR_1 (0x01 << 5)
@@ -43,7 +41,6 @@
 
 
 //------Global Variables------
-//____________CAN____________
 //float motor_true_torques; DISABLED, only needed for data collection
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2; // wired to CAN2
 int MOTOR_IDS[3] = {MOTOR_1, MOTOR_2, MOTOR_3};
@@ -68,6 +65,16 @@ const float GYRO_SCALE  = (1.0f / 1000.0f) * PI / 180.0f;  // SparkFun outputs m
 const float BETA = 0.02f;                                   // Madgwick tuning param
 Filter imu_filter((float)imu_timer_freq, BETA);
 volatile bool imu_ready = false;
+
+//_____________IMU Buffers________________
+int buff_pointer = 0;
+const int max_buff_size = 160*5; //the number after 160 is the number of seconds
+unsigned long time_buffer[max_buff_size];
+float roll_buffer[max_buff_size];
+float pitch_buffer[max_buff_size];
+float gyroX_buffer[max_buff_size];
+float gyroY_buffer[max_buff_size];
+float gyroZ_buffer[max_buff_size];
 
 // Controller inputs — updated at 160 Hz in loop()
 float filtered_roll  = 0.0f;  // radians
@@ -104,24 +111,9 @@ const float K_z[2]  = {-1, -1.0357};
 Bounce debouncer = Bounce();
 bool control_run = false; // false by default
 
-<<<<<<< HEAD
-=======
-//____________SD Card Data____________
-File roll_data_file;
-File pitch_data_file;
-File gyro_x_data_file;
-File gyro_y_data_file;
-File gyro_z_data_file;
-
 //____________Oscilloscope Verification____________
 bool osc_state = false;
 
-
-
->>>>>>> a00e9f622a8a7f023923aa74cf83fdbc770999f6
-
-
-/*========================DEFINITIONS========================*/
 
 //==============Core stuff==============
 
@@ -137,7 +129,7 @@ void setup() {
   delay(1000);
   Serial.begin(9600);
   Serial.println("------------Beginning Setup------------");
-  /*____________________________SPI/IMU____________________________*/
+  /*____________________________IMU____________________________*/
   
   Wire.begin();
 
@@ -271,10 +263,18 @@ void loop() {
     gyro_z         = -(gz - 0.0001833806f); // bias-subtracted
     
     
-    
-    
     // 2. Run the controller (Only if the switch is ON)
     if (control_run){
+      // save a point to the buffer if buffers are not maxed out
+      if(buff_pointer < max_buff_size){
+        time_buffer[buff_pointer] = micros();
+        roll_buffer[buff_pointer] = filtered_roll;
+        pitch_buffer[buff_pointer] = filtered_pitch;
+        gyroX_buffer[buff_pointer] = gyro_x;
+        gyroY_buffer[buff_pointer] = gyro_y;
+        gyroZ_buffer[buff_pointer] = gyro_z;
+        buff_pointer++;
+      }
       run_controller();
     }
   }
@@ -367,7 +367,23 @@ void shutdown(){
 
 
   //_____ SD CARD SHUTDOWN _____________
-  save_data_2_SD();
+
+  // save the buffers
+  save_data_2_SD(time_buffer, "time.csv");
+  save_data_2_SD(roll_buffer, "roll.csv");
+  save_data_2_SD(pitch_buffer, "pitch.csv");
+  save_data_2_SD(gyroX_buffer, "gyro_x.csv");
+  save_data_2_SD(gyroY_buffer, "gyro_y.csv");
+  save_data_2_SD(gyroZ_buffer, "gyro_z.csv");
+
+  // reset the buffers
+  memset(time_buffer, 0, sizeof(time_buffer));
+  memset(roll_buffer, 0, sizeof(roll_buffer));
+  memset(pitch_buffer, 0, sizeof(pitch_buffer));
+  memset(gyroX_buffer, 0, sizeof(gyroX_buffer));
+  memset(gyroY_buffer, 0, sizeof(gyroY_buffer));
+  memset(gyroZ_buffer, 0, sizeof(gyroZ_buffer));
+  buff_pointer = 0;
 
 
   //------Acknowledge------
@@ -538,17 +554,30 @@ float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, fl
 }
 
 
-// SD Card Helpers
-void save_data_2_SD(){
-  File my_file = SD.open("FILE.csv", FILE_WRITE);
+// SD Card Helper
+/**
+ * @brief Saves buffer to a csv file
+ * 
+ * @return None
+ * 
+ * @note T data: the buffer to save, must be an array, can be of any type.
+        const char* name: the name of the file to save the data into, remember to include .csv at the end. e.g. "Ryan_Data.csv"
+ */
+template <typename T>
+void save_data_2_SD(T data, const char* name){
+  Serial.print("Checking the quality of the fish in: "); // letting the user know what file is currently being openned
+  Serial.println(name);
 
-  //string string_Data = String(data);
+  SD.remove(name); // delete the previous file so it is clean
+  File my_file = SD.open(name, FILE_WRITE);
 
-  my_file.println(5);
-  my_file.print(",");
-  myfile.println(5.46);
-  my_file.print(",");
+  // writing all of the data to the respective file
+  int writing_pointer = 0;
+  while(writing_pointer < buff_pointer){
+    my_file.println(data[writing_pointer]);
+    writing_pointer++;
+  }
 
   my_file.close();
-  Serial.println("REMOVE THE DAGGER");
+  Serial.println("THROW THE FISH INTO THE OCEAN!"); //SD card is safe to remove
 }
