@@ -124,6 +124,10 @@ const float K_xy[4] = { 0, -gain_mod*29.6151, -gain_mod*0.5554, -gain_mod*14.680
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2] = { -1, -1.0357 };
 
+// Torque output filtering constants
+float torque_filt[3] = {0.0f, 0.0f, 0.0f};
+const float alpha = 0.15f;
+
 //____________Switches____________
 Bounce debouncer = Bounce();
 bool control_run = false;  // false by default
@@ -346,9 +350,13 @@ void run_controller() {
   T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
 
   // Command the drives
-  send_torque(MOTOR_1, 1 * T1);
-  send_torque(MOTOR_2, 1 * T2);
-  send_torque(MOTOR_3, 1 * T3);
+	torque_filt[0] = alpha * T1 + (1.0f - alpha) * torque_filt[0];
+	torque_filt[1] = alpha * T2 + (1.0f - alpha) * torque_filt[1];
+	torque_filt[2] = alpha * T3 + (1.0f - alpha) * torque_filt[2];
+	
+	send_torque(MOTOR_1, torque_filt[0]);	
+	send_torque(MOTOR_2, torque_filt[1]);
+	send_torque(MOTOR_3, torque_filt[2]);
 
   // save a point to the buffer if buffers are not maxed out
   if (buff_pointer < max_buff_size) {
@@ -361,9 +369,9 @@ void run_controller() {
     gyroY_buffer[buff_pointer] = gyro_y;
     gyroZ_buffer[buff_pointer] = gyro_z;
 
-    T1_buffer[buff_pointer] = T1;
-    T2_buffer[buff_pointer] = T2;
-    T3_buffer[buff_pointer] = T3;
+    T1_buffer[buff_pointer] = torque_filt[0];
+    T2_buffer[buff_pointer] = torque_filt[1];
+    T3_buffer[buff_pointer] = torque_filt[2];
 
     phi_x_buffer[buff_pointer] = phi_x;
     phi_y_buffer[buff_pointer] = phi_y;
