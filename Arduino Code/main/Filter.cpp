@@ -21,8 +21,7 @@ void Filter::update(float gx, float gy, float gz, float ax, float ay, float az) 
     gy -= _gy_bias;
     gz -= _gz_bias;
 
-    // Madgwick expects gyro in deg/s, accel in any consistent unit (it normalizes)
-    // RAD_TO_DEG is defined by Arduino core as 57.295...
+    // Madgwick expects gyro in deg/s, accel in any consistent unit
     _madgwick.updateIMU(
         gx * (float)RAD_TO_DEG,
         gy * (float)RAD_TO_DEG,
