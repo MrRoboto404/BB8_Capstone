@@ -89,7 +89,7 @@ float phi_y_buffer[max_buff_size];
 
 float phi_dx_buffer[max_buff_size];
 float phi_dy_buffer[max_buff_size];
-float phi_dz_buffer[max_buff_size];
+// float phi_dz_buffer[max_buff_size];
 
 // Controller inputs — updated at 160 Hz in loop()
 float filtered_roll = 0.0f;   // radians
@@ -114,10 +114,12 @@ const float MAX_TORQUE = 0.20f;  // N*m
 const float SQRT_2 = 1.41421356f;
 const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
+const float CSC_35 = 1.74344679f; // 1.0 / sin(35 deg)
+const float SEC_35 = 1.22077458f; // 1.0 / cos(35 deg)
 
 // LQR Controller Gains
-// const float gain_mod = 0.2;
-const float K_xy[4] = { 0, -29.6151, -0.5554, -14.6805 };
+const float gain_mod = 0.4;
+const float K_xy[4] = { 0, -gain_mod*29.6151, -gain_mod*0.5554, -gain_mod*14.6805 };
 // const float K_xy[4] = {gain_mod*-1.2527, gain_mod*-140.9692, gain_mod*-3.2801, gain_mod*-70.3089};
 // const float K_xy[4] = {gain_mod*0, gain_mod*-140.9692, gain_mod*-0, gain_mod*-70.3089};
 const float K_z[2] = { -1, -1.0357 };
@@ -318,7 +320,7 @@ void run_controller() {
   // Ball rolling rate (phi_dot)
   float phi_dot_x = calc_phi_dot_x(psd1, psd2, psd3, gyro_x, sX, cX, sY, cY);
   float phi_dot_y = calc_phi_dot_y(psd1, psd2, psd3, gyro_y, sX, cX);
-  float phi_dot_z = calc_phi_dot_z(psd1, psd2, psd3, gyro_x, gyro_z, sX, cX, sY, cY);
+  // float phi_dot_z = calc_phi_dot_z(psd1, psd2, psd3, gyro_x, gyro_z, sX, cX, sY, cY);
 
   // Integrate velocity
   phi_x += phi_dot_x * dt;
@@ -368,7 +370,7 @@ void run_controller() {
 
     phi_dx_buffer[buff_pointer] = phi_dot_x;
     phi_dy_buffer[buff_pointer] = phi_dot_y;
-    phi_dz_buffer[buff_pointer] = phi_dot_z;
+    // phi_dz_buffer[buff_pointer] = phi_dot_z;
 
     buff_pointer++;
   }
@@ -397,56 +399,11 @@ void shutdown() {
   axis_state = 1;
   set_motors_states(axis_state);  // idle
 
-  //------IMU Stuff------
+  // Save all data to one file
+  save_all_data_to_one_CSV();
 
-
-  //_____ SD CARD SHUTDOWN _____________
-
-  // save the buffers
-  save_time = micros();
-
-  save_data_2_SD(time_buffer, "time", save_time);
-
-  save_data_2_SD(roll_buffer, "roll", save_time);
-  save_data_2_SD(pitch_buffer, "pitch", save_time);
-
-  save_data_2_SD(gyroX_buffer, "gyro_x", save_time);
-  save_data_2_SD(gyroY_buffer, "gyro_y", save_time);
-  save_data_2_SD(gyroZ_buffer, "gyro_z", save_time);
-
-  save_data_2_SD(T1_buffer, "T1", save_time);
-  save_data_2_SD(T2_buffer, "T2", save_time);
-  save_data_2_SD(T3_buffer, "T3", save_time);
-
-  save_data_2_SD(phi_x_buffer, "phi_x", save_time);
-  save_data_2_SD(phi_y_buffer, "phi_y", save_time);
-
-  save_data_2_SD(phi_dx_buffer, "phi_dx", save_time);
-  save_data_2_SD(phi_dy_buffer, "phi_dy", save_time);
-  save_data_2_SD(phi_dz_buffer, "phi_dz", save_time);
-
-  // reset the buffers
-  memset(time_buffer, 0, sizeof(time_buffer));
-
-  memset(roll_buffer, 0, sizeof(roll_buffer));
-  memset(pitch_buffer, 0, sizeof(pitch_buffer));
-
-  memset(gyroX_buffer, 0, sizeof(gyroX_buffer));
-  memset(gyroY_buffer, 0, sizeof(gyroY_buffer));
-  memset(gyroZ_buffer, 0, sizeof(gyroZ_buffer));
-
-  memset(T1_buffer, 0, sizeof(T1_buffer));
-  memset(T2_buffer, 0, sizeof(T2_buffer));
-  memset(T3_buffer, 0, sizeof(T3_buffer));
-
-  memset(phi_x_buffer, 0, sizeof(phi_x_buffer));
-  memset(phi_y_buffer, 0, sizeof(phi_y_buffer));
-
-  memset(phi_dx_buffer, 0, sizeof(phi_dx_buffer));
-  memset(phi_dy_buffer, 0, sizeof(phi_dy_buffer));
-  memset(phi_dz_buffer, 0, sizeof(phi_dz_buffer));
+  // Clear buffers and reset pointer
   buff_pointer = 0;
-
 
   //------Acknowledge------
   Serial.println("------------Safely Exited Program------------");
@@ -601,17 +558,28 @@ void motors_reset_position(void) {
 
 //==============KINEMATIC HELPERS==============
 float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
-  return (1.0 / (3.0 * rB)) * ((SQRT_6 * rW * sX * sY * (-dp2 + dp3)) + (SQRT_2 * rW * cX * sY * (dp1 + dp2 + dp3)) + (cY * (SQRT_2 * rW * (-2.0 * dp1 + dp2 + dp3) + 3.0 * rB * dthx)));
+    // Broken into terms for readability and to match the equation structure perfectly
+    float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
+    float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
+    float term3 = cY * (rW * CSC_35 * (dp2 + dp3) + 3.0f * rB * dthx);
+    return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
 }
-
 float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
-  return (1.0 / (3.0 * rB)) * ((SQRT_6 * rW * cX * (-dp2 + dp3)) - (SQRT_2 * rW * sX * (dp1 + dp2 + dp3)) + (3.0 * rB * dthy));
+    float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
+    float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
+    return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
 }
 
-float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, float sX, float cX, float sY, float cY) {
-  return (1.0 / (3.0 * rB)) * ((SQRT_2 * rW * (cX * cY + 2.0 * sY) * dp1) + (SQRT_2 * rW * (SQRT_3 * cY * sX * (-dp2 + dp3) + cX * cY * (dp2 + dp3) - sY * (dp2 + dp3))) + (3.0 * rB * (-sY * dthx + dthz)));
-}
+// float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
+//   return (1.0/(3.0*rB)) * ( (SQRT_6*rW*sX*sY*(-dp2+dp3)) + (SQRT_2*rW*cX*sY*(dp1+dp2+dp3)) + (cY*(SQRT_2*rW*(-2.0*dp1+dp2+dp3) + 3.0*rB*dthx)) );
+// }
+// float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
+//   return (1.0/(3.0*rB)) * ( (SQRT_6*rW*cX*(-dp2+dp3)) - (SQRT_2*rW*sX*(dp1+dp2+dp3)) + (3.0*rB*dthy) );
+// }
 
+// float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, float sX, float cX, float sY, float cY) {
+//   return (1.0/(3.0*rB)) * ( (SQRT_2*rW*(cX*cY + 2.0*sY)*dp1) + (SQRT_2*rW*(SQRT_3*cY*sX*(-dp2+dp3) + cX*cY*(dp2+dp3) - sY*(dp2+dp3))) + (3.0*rB*(-sY*dthx + dthz)) );
+// }
 
 // SD Card Helper
 /**
@@ -622,32 +590,70 @@ float calc_phi_dot_z(float dp1, float dp2, float dp3, float dthx, float dthz, fl
  * @note T data: the buffer to save, must be an array, can be of any type.
         const char* half_name: the name of the file to save the data into, remember to include"
  */
-template<typename T>
-void save_data_2_SD(T data, const char* half_name, unsigned long save_time) {
-  Serial.print("Checking the quality of the fish in: ");  // letting the user know what file is currently being openned
-  Serial.println(half_name);
+// template<typename T>
+// void save_data_2_SD(T data, const char* half_name, unsigned long save_time) {
+//   Serial.print("Checking the quality of the fish in: ");  // letting the user know what file is currently being openned
+//   Serial.println(half_name);
 
-  char name[40];
-  sprintf(name, "%lu_%s.csv", save_time, half_name);
-  Serial.println(name);
+//   char name[40];
+//   sprintf(name, "%lu_%s.csv", save_time, half_name);
+//   Serial.println(name);
 
-  if (sd.exists(name)) {
-    sd.remove(name);  // delete the previous file so it is clean
-  }
+//   if (sd.exists(name)) {
+//     sd.remove(name);  // delete the previous file so it is clean
+//   }
 
-  my_file = sd.open(name, FILE_WRITE);
+//   my_file = sd.open(name, FILE_WRITE);
+//   if (!my_file) {
+//     Serial.println("File failed to open");
+//   }
+
+//   // writing all of the data to the respective file
+//   int writing_pointer = 0;
+//   while (writing_pointer < buff_pointer) {
+//     my_file.println(data[writing_pointer]);
+//     writing_pointer++;
+//   }
+
+//   my_file.close();
+//   Serial.println("THROW THE FISH INTO THE OCEAN!");  //SD card is safe to remove
+//   delay(100);
+// }
+
+void save_all_data_to_one_CSV() {
+  unsigned long save_time = micros();
+  char filename[40];
+  sprintf(filename, "%lu_motor_data.csv", save_time);
+
+  Serial.print("Creating master log: ");
+  Serial.println(filename);
+
+  my_file = sd.open(filename, FILE_WRITE);
   if (!my_file) {
-    Serial.println("File failed to open");
+    Serial.println("Failed to open master log!");
+    return;
   }
 
-  // writing all of the data to the respective file
-  int writing_pointer = 0;
-  while (writing_pointer < buff_pointer) {
-    my_file.println(data[writing_pointer]);
-    writing_pointer++;
+  // 1. Write the Header Row
+  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY");
+
+  // 2. Write the Data Rows
+  for (int i = 0; i < buff_pointer; i++) {
+    my_file.print(time_buffer[i]);     my_file.print(",");
+    my_file.print(roll_buffer[i], 4);  my_file.print(",");
+    my_file.print(pitch_buffer[i], 4); my_file.print(",");
+    my_file.print(gyroX_buffer[i], 4); my_file.print(",");
+    my_file.print(gyroY_buffer[i], 4); my_file.print(",");
+    my_file.print(gyroZ_buffer[i], 4); my_file.print(",");
+    my_file.print(T1_buffer[i], 4);    my_file.print(",");
+    my_file.print(T2_buffer[i], 4);    my_file.print(",");
+    my_file.print(T3_buffer[i], 4);    my_file.print(",");
+    my_file.print(phi_x_buffer[i], 4); my_file.print(",");
+    my_file.print(phi_y_buffer[i], 4); my_file.print(",");
+    my_file.print(phi_dx_buffer[i], 4);my_file.print(",");
+    my_file.println(phi_dy_buffer[i], 4); // println for the end of the row
   }
 
   my_file.close();
-  Serial.println("THROW THE FISH INTO THE OCEAN!");  //SD card is safe to remove
-  delay(100);
+  Serial.println("Master log saved. FISH ARE IN ONE BUCKET!");
 }
