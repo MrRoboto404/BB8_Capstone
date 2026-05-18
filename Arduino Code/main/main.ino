@@ -212,8 +212,7 @@ void setup() {
   pinMode(OSC_PIN, OUTPUT);
 
 
-  /*_________________________ACK SETUP_______________________*/
-  Serial.println("------------Completed Setup.------------");
+  
 
   /*_______________SD CARD SETUP_____________________________*/
   Serial.println("Starting SD card");
@@ -224,6 +223,9 @@ void setup() {
   }
 
   Serial.println("CAUGHT SOME FISH!");
+
+  /*_________________________ACK SETUP_______________________*/
+  Serial.println("------------Completed Setup.------------");
 }
 
 /** 
