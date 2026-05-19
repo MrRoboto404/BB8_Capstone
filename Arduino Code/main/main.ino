@@ -39,9 +39,10 @@
 //------Global Variables------
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // wired to CAN2
 int MOTOR_IDS[3] = { MOTOR_1, MOTOR_2, MOTOR_3 };
-volatile float motor_true_vels[3];  // index 0 is motor 1, and so on
-int axis_state = 1;                 // default to idle
-float vel;                          // placeholder variables for recieving data from encoders
+volatile float motor_true_vels[3]; 
+volatile float motor_true_pos[3];  
+int axis_state = 1;                 
+float vel;                          
 bool errored = false;
 
 //____________IMU____________
@@ -82,6 +83,14 @@ float phi_y_buffer[max_buff_size];
 float phi_dx_buffer[max_buff_size];
 float phi_dy_buffer[max_buff_size];
 
+float motor_vel_1_buffer[max_buff_size];
+float motor_vel_2_buffer[max_buff_size];
+float motor_vel_3_buffer[max_buff_size];
+
+float motor_pos_1_buffer[max_buff_size];
+float motor_pos_2_buffer[max_buff_size];
+float motor_pos_3_buffer[max_buff_size];
+
 // Controller inputs
 float filtered_roll = 0.0f;   
 float filtered_pitch = 0.0f;  
@@ -99,14 +108,17 @@ const float rW = 0.048;          // wheel radius (m)
 const float rB = 0.12;           // ball radius (m)
 const float alpha_rad = 0.785;   // 45 degrees
 const float beta_rad = 0.0;      // Alignment offset
-const float MAX_TORQUE = 0.20f;  // N*m
+const float MAX_TORQUE = 0.23f;  
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
 const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
 const float CSC_35 = 1.74344679f; 
-const float SEC_35 = 1.22077458f; 
+const float SEC_35 = 1.22077458f;
+const float cA = cos(alpha_rad);
+const float cB = cos(beta_rad);
+const float sB = sin(beta_rad);
 
 //____________Direct LQR Tuning Matrix____________
 // Indices: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
@@ -206,13 +218,6 @@ void setup() {
   printActiveGains();
 }
 
-/** 
-* @brief Main loop that is in all .ino files
-*
-* @return None
-*
-* @note Errors not yet implemented
-*/
 void loop() {
   // Always listen for CAN events regardless of state
   Can2.events();
@@ -302,13 +307,10 @@ void run_controller() {
   float Ty = (K_xy[0] * phi_y + K_xy[1] * filtered_pitch + K_xy[2] * phi_dot_y + K_xy[3] * gyro_y);
   float Tz = (K_z[1] * gyro_z);
 
-  float cA = cos(alpha_rad);
-  float cB = cos(beta_rad);
-  float sB = sin(beta_rad);
-
   float T1 = (1.0 / (3.0 * 27)) * (Tz + (2.0 / cA) * (Tx * cB - Ty * sB));
   float T2 = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (-SQRT_3 * Tx + Ty) - cB * (Tx + SQRT_3 * Ty)));
   float T3 = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (SQRT_3 * Tx + Ty) + cB * (-Tx + SQRT_3 * Ty)));
+  
 
   T1 = constrain(T1, -MAX_TORQUE, MAX_TORQUE);
   T2 = constrain(T2, -MAX_TORQUE, MAX_TORQUE);
@@ -332,6 +334,12 @@ void run_controller() {
     phi_y_buffer[buff_pointer] = phi_y;
     phi_dx_buffer[buff_pointer] = phi_dot_x;
     phi_dy_buffer[buff_pointer] = phi_dot_y;
+    motor_vel_1_buffer[buff_pointer] = motor_true_vels[0];
+    motor_vel_2_buffer[buff_pointer] = motor_true_vels[1];
+    motor_vel_3_buffer[buff_pointer] = motor_true_vels[2];
+    motor_pos_1_buffer[buff_pointer] = motor_true_pos[0];
+    motor_pos_2_buffer[buff_pointer] = motor_true_pos[1];
+    motor_pos_3_buffer[buff_pointer] = motor_true_pos[2];
     buff_pointer++;
   }
 
@@ -423,6 +431,7 @@ void can_sniff(const CAN_message_t& msg) {
   uint8_t cmd = msg.id & 0x1F;  
 
   if (cmd == GET_ENCODER) {
+    motor_true_pos[node - 1] = *reinterpret_cast<const float*>(msg.buf);
     motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
   } else if (cmd == GET_ERROR) {
     uint32_t errors_raw = *reinterpret_cast<const uint32_t*>(msg.buf + 4);
@@ -516,7 +525,7 @@ void save_all_data_to_one_CSV() {
     return;
   }
 
-  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY");
+  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3");
 
   for (int i = 0; i < buff_pointer; i++) {
     my_file.print(time_buffer[i]);     my_file.print(",");
@@ -531,7 +540,14 @@ void save_all_data_to_one_CSV() {
     my_file.print(phi_x_buffer[i], 4); my_file.print(",");
     my_file.print(phi_y_buffer[i], 4); my_file.print(",");
     my_file.print(phi_dx_buffer[i], 4);my_file.print(",");
-    my_file.println(phi_dy_buffer[i], 4); 
+    my_file.print(phi_dy_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_vel_1_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_vel_2_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_vel_3_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_pos_1_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_pos_2_buffer[i], 4); my_file.print(",");
+    my_file.println(motor_pos_3_buffer[i], 4);
+    
   }
 
   my_file.close();
