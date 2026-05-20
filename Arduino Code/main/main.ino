@@ -73,6 +73,10 @@ float gyroX_buffer[max_buff_size];
 float gyroY_buffer[max_buff_size];
 float gyroZ_buffer[max_buff_size];
 
+bool kick_1_buffer[max_buff_size];
+bool kick_2_buffer[max_buff_size];
+bool kick_3_buffer[max_buff_size];
+
 float T1_buffer[max_buff_size];
 float T2_buffer[max_buff_size];
 float T3_buffer[max_buff_size];
@@ -316,9 +320,9 @@ void run_controller() {
   T2 = constrain(T2, -MAX_TORQUE, MAX_TORQUE);
   T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
 
-  send_torque(MOTOR_1, 1 * T1);
-  send_torque(MOTOR_2, 1 * T2);
-  send_torque(MOTOR_3, 1 * T3);
+  send_torque_compensated(0, MOTOR_1, 1 * T1);
+  send_torque_compensated(1, MOTOR_2, 1 * T2);
+  send_torque_compensated(2, MOTOR_3, 1 * T3);
 
   if (buff_pointer < max_buff_size) {
     time_buffer[buff_pointer] = micros();
@@ -330,6 +334,9 @@ void run_controller() {
     T1_buffer[buff_pointer] = T1;
     T2_buffer[buff_pointer] = T2;
     T3_buffer[buff_pointer] = T3;
+    kick_1_buffer[buff_pointer] = in_backlash_kick[0];
+    kick_2_buffer[buff_pointer] = in_backlash_kick[1];
+    kick_3_buffer[buff_pointer] = in_backlash_kick[2];
     phi_x_buffer[buff_pointer] = phi_x;
     phi_y_buffer[buff_pointer] = phi_y;
     phi_dx_buffer[buff_pointer] = phi_dot_x;
@@ -511,6 +518,59 @@ float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, floa
     return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
 }
 
+//==============BACKLASH COMPENSATION==============
+
+// Tunable parameters — start conservative and increase
+#define BACKLASH_IMPULSE_NM    0.15f   // magnitude of kick (Nm) — tune this!
+#define BACKLASH_IMPULSE_MS    20      // duration of kick in milliseconds — tune this!
+
+// Per-motor state tracking
+float   prev_torque_cmd[3]      = {0.0f, 0.0f, 0.0f};
+bool    in_backlash_kick[3]     = {false, false, false};
+uint32_t kick_start_time[3]    = {0, 0, 0};
+float   kick_direction[3]       = {0.0f, 0.0f, 0.0f};
+
+/**
+ * @param motor_idx  0-indexed motor number (0, 1, or 2)
+ * @param MOTOR      CAN node ID (MOTOR_1, MOTOR_2, MOTOR_3)
+ * @param torque_cmd Desired torque from LQR (Nm)
+ */
+void send_torque_compensated(int motor_idx, int MOTOR, float torque_cmd) {
+    uint32_t now = millis();
+    float torque_out = torque_cmd;
+
+    // Check if we just crossed zero
+    bool was_positive = (prev_torque_cmd[motor_idx] > 0.0f);
+    bool was_negative = (prev_torque_cmd[motor_idx] < 0.0f);
+    bool now_positive = (torque_cmd > 0.0f);
+    bool now_negative = (torque_cmd < 0.0f);
+
+    bool direction_changed = (was_positive && now_negative) ||
+                             (was_negative && now_positive);
+
+    if (direction_changed && !in_backlash_kick[motor_idx]) {
+        // Start a kick in the new direction
+        in_backlash_kick[motor_idx] = true;
+        kick_start_time[motor_idx]  = now;
+        kick_direction[motor_idx]   = (now_positive) ? 1.0f : -1.0f;
+    }
+
+    // If currently in a kick, override torque
+    if (in_backlash_kick[motor_idx]) {
+        if ((now - kick_start_time[motor_idx]) < BACKLASH_IMPULSE_MS) {
+            // Output the impulse — adds on top of LQR command
+            torque_out = torque_cmd + kick_direction[motor_idx] * BACKLASH_IMPULSE_NM;
+        } else {
+            // Kick is over
+            in_backlash_kick[motor_idx] = false;
+        }
+    }
+    torque_out = constrain(torque_out, -MAX_TORQUE, MAX_TORQUE);
+  
+    prev_torque_cmd[motor_idx] = torque_cmd;
+    send_torque(MOTOR, torque_out);
+}
+
 void save_all_data_to_one_CSV() {
   unsigned long save_time = micros();
   char filename[40];
@@ -525,7 +585,7 @@ void save_all_data_to_one_CSV() {
     return;
   }
 
-  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3");
+  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3,kick_1,kick_2,kick_3");
 
   for (int i = 0; i < buff_pointer; i++) {
     my_file.print(time_buffer[i]);     my_file.print(",");
@@ -546,7 +606,10 @@ void save_all_data_to_one_CSV() {
     my_file.print(motor_vel_3_buffer[i], 4); my_file.print(",");
     my_file.print(motor_pos_1_buffer[i], 4); my_file.print(",");
     my_file.print(motor_pos_2_buffer[i], 4); my_file.print(",");
-    my_file.println(motor_pos_3_buffer[i], 4);
+    my_file.print(motor_pos_3_buffer[i], 4); my_file.print(",");
+    my_file.print(kick_1_buffer[i]); my_file.print(",");
+    my_file.print(kick_2_buffer[i]); my_file.print(",");
+    my_file.println(kick_3_buffer[i]);
     
   }
 
