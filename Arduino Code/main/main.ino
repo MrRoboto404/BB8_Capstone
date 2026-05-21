@@ -10,8 +10,6 @@
 #include <SPI.h>
 #include <SdFat.h>
 
-
-
 /*========================GLOBAL DECLARATIONS========================*/
 //____________CAN Setup____________
 //------Constants------
@@ -37,7 +35,7 @@
 #define ERROR_OVERCURRENT (0x00001000)
 
 //------Global Variables------
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // wired to CAN2
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  
 int MOTOR_IDS[3] = { MOTOR_1, MOTOR_2, MOTOR_3 };
 volatile float motor_true_vels[3]; 
 volatile float motor_true_pos[3];  
@@ -52,7 +50,7 @@ sfe_ism_data_t gyroData;
 
 IntervalTimer myTimer;
 float imu_timer_freq = 200.0;                   // hz
-int imu_period = 1000000 / imu_timer_freq;  // us
+int imu_period = 1000000 / imu_timer_freq;      // us
 
 //____________IMU Filter____________
 const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f;         
@@ -108,7 +106,7 @@ const float rW = 0.048;          // wheel radius (m)
 const float rB = 0.12;           // ball radius (m)
 const float alpha_rad = 0.785;   // 45 degrees
 const float beta_rad = 0.0;      // Alignment offset
-const float MAX_TORQUE = 0.23f;  
+float MAX_TORQUE = 0.21f;  
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -121,11 +119,19 @@ const float cB = cos(beta_rad);
 const float sB = sin(beta_rad);
 
 //____________Direct LQR Tuning Matrix____________
-// Indices: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
-// Initialized to your original baseline values (Gain multipliers pre-applied)
-float K_xy[4] = { 0.0f, -115.0f, -2.2f, -3.5f };
+float K_xy[4] = { 0.0f, -115.0f, -2.2f, -5.0f };
 const float K_z[2] = { -1.0f, -1.0357f };
-// const float K_z[2] = { 0f, 0f };
+
+//____________Backlash Compensation____________
+// Note: These are no longer const so they can be modified via Serial
+float KICK_TORQUE = 0.05f;      // Accelerate torque amplitude (Nm)
+int KICK_CYCLES = 3;            // How many 200Hz cycles to accelerate
+float BRAKE_TORQUE = 0.02f;     // Decelerate torque amplitude (Nm)
+int BRAKE_CYCLES = 2;           // How many 200Hz cycles to brake
+float TORQUE_DEADBAND = 0.002f; // Minimum torque required to trigger a reversal
+
+int backlash_state[3] = {1, 1, 1};    // 1 = engaged positive, -1 = engaged negative
+int kick_timer[3] = {0, 0, 0};        // Countdown timers for active kicks
 
 //____________Switches____________
 Bounce debouncer = Bounce();
@@ -140,14 +146,6 @@ FsFile my_file;
 
 /*========================CORE LOGIC========================*/
 
-/**
- * @brief Initializes IMU communication, CAN communication, motor states,
-                determines gyro bias, [LIST OTHERS]
- * 
- * @return None
- * 
- * @note Errors not yet implemented
- */
 void setup() {
   delay(1000);
   Serial.begin(9600);
@@ -160,9 +158,7 @@ void setup() {
     delay(500);
   }
 
-  // Reset device to default settings
   myISM.deviceReset();
-  // wait for reset to complete
   while (!myISM.getDeviceReset()) {
     delay(1);
   }
@@ -176,10 +172,6 @@ void setup() {
   myISM.setAccelFullScale(ISM_2g);
   myISM.setGyroDataRate(ISM_GY_ODR_208Hz);
   myISM.setGyroFullScale(ISM_500dps);
-
-  // myISM.setGyroFilterLP1(true);
-  // myISM.setGyroLP1Bandwidth(ISM_MEDIUM);  
-  // myISM.setAccelSlopeFilter(ISM_LP_ODR_DIV_10);  
 
   /*____________________________IMU CALIBRATION____________________________*/
   imu_filter.begin();
@@ -214,18 +206,13 @@ void setup() {
   }
   Serial.println("CAUGHT SOME FISH!");
   
-  // Print initial active tuning matrix
   printActiveGains();
 }
 
 void loop() {
-  // Always listen for CAN events regardless of state
   Can2.events();
-
-  // Handle live serial data asynchronously outside the critical 160Hz step
   checkSerialCommands();
 
-  // Detect if control switch has been flicked
   debouncer.update();
   if (debouncer.changed()) {
     control_run = (debouncer.read() == LOW);
@@ -246,7 +233,6 @@ void loop() {
     }
   }
 
-  // 160Hz Execution Block triggered by the Timer ISR
   if (imu_ready) {
     imu_ready = false;  
 
@@ -276,6 +262,7 @@ void loop() {
 
 /**
  * @brief Executes LQR math and outputs torque to the motors using live K_xy gains
+ * Includes Feed-Forward Backlash Compensation (Kick & Brake)
  */
 void run_controller() {
   uint32_t current_time = micros();
@@ -287,39 +274,94 @@ void run_controller() {
   if (last_time == 0) dt = 1.0 / imu_timer_freq;
   last_time = current_time;
 
-  float psd1 = motor_true_vels[0] / 27.0;
-  float psd2 = motor_true_vels[1] / 27.0;
-  float psd3 = motor_true_vels[2] / 27.0;
+  // 1. Read true velocities
+  float psd[3] = {
+    motor_true_vels[0] / 27.0f,
+    motor_true_vels[1] / 27.0f,
+    motor_true_vels[2] / 27.0f
+  };
+
+  // 2. ENCODER SKIP: Mask velocity if the motor is currently kicking through the deadzone
+  for (int i = 0; i < 3; i++) {
+    if (kick_timer[i] > 0) {
+      psd[i] = 0.0f; 
+    }
+  }
 
   float sX = sin(filtered_roll);
   float cX = cos(filtered_roll);
   float sY = sin(filtered_pitch);
   float cY = cos(filtered_pitch);
 
-  float phi_dot_x = calc_phi_dot_x(psd1, psd2, psd3, gyro_x, sX, cX, sY, cY);
-  float phi_dot_y = calc_phi_dot_y(psd1, psd2, psd3, gyro_y, sX, cX);
+  // Calculate ball kinematics using the (potentially masked) velocities
+  float phi_dot_x = calc_phi_dot_x(psd[0], psd[1], psd[2], gyro_x, sX, cX, sY, cY);
+  float phi_dot_y = calc_phi_dot_y(psd[0], psd[1], psd[2], gyro_y, sX, cX);
 
   phi_x += phi_dot_x * dt;
   phi_y += phi_dot_y * dt;
 
-  // LQR calculation using the live modified elements of K_xy
+  // LQR calculation 
   float Tx = -(K_xy[0] * phi_x + K_xy[1] * filtered_roll + K_xy[2] * phi_dot_x + K_xy[3] * gyro_x);
   float Ty = (K_xy[0] * phi_y + K_xy[1] * filtered_pitch + K_xy[2] * phi_dot_y + K_xy[3] * gyro_y);
   float Tz = (K_z[1] * gyro_z);
 
-  float T1 = (1.0 / (3.0 * 27)) * (Tz + (2.0 / cA) * (Tx * cB - Ty * sB));
-  float T2 = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (-SQRT_3 * Tx + Ty) - cB * (Tx + SQRT_3 * Ty)));
-  float T3 = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (SQRT_3 * Tx + Ty) + cB * (-Tx + SQRT_3 * Ty)));
+  float T_cmd[3];
+  T_cmd[0] = (1.0 / (3.0 * 27)) * (Tz + (2.0 / cA) * (Tx * cB - Ty * sB));
+  T_cmd[1] = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (-SQRT_3 * Tx + Ty) - cB * (Tx + SQRT_3 * Ty)));
+  T_cmd[2] = (1.0 / (3.0 * 27)) * (Tz + (1.0 / cA) * (sB * (SQRT_3 * Tx + Ty) + cB * (-Tx + SQRT_3 * Ty)));
   
+  // 3. FEED-FORWARD KICK & BRAKE LOGIC
+  for (int i = 0; i < 3; i++) {
+    
+    // ----- ARE WE CURRENTLY IN A KICK/BRAKE SEQUENCE? -----
+    if (kick_timer[i] > 0) {
+      
+      // Phase 1: The Acceleration Kick
+      if (kick_timer[i] > BRAKE_CYCLES) {
+        if (backlash_state[i] == 1) {
+          T_cmd[i] = KICK_TORQUE;  
+        } else {
+          T_cmd[i] = -KICK_TORQUE; 
+        }
+      } 
+      // Phase 2: The Braking Pulse (Reverse Torque)
+      else {
+        if (backlash_state[i] == 1) {
+          T_cmd[i] = -BRAKE_TORQUE; 
+        } else {
+          T_cmd[i] = BRAKE_TORQUE;  
+        }
+      }
+      
+      kick_timer[i]--; // Countdown the timer
+    } 
+    
+    // ----- IF NORMAL, WATCH FOR DIRECTION REVERSALS -----
+    else {
+      // Reversing from Positive to Negative
+      if (backlash_state[i] == 1 && T_cmd[i] < -TORQUE_DEADBAND) {
+        backlash_state[i] = -1;                                // 1. Flip state
+        kick_timer[i] = KICK_CYCLES + BRAKE_CYCLES;            // 2. Start total timer
+        T_cmd[i] = -KICK_TORQUE;                               // 3. Start kicking
+      } 
+      // Reversing from Negative to Positive
+      else if (backlash_state[i] == -1 && T_cmd[i] > TORQUE_DEADBAND) {
+        backlash_state[i] = 1;                                 // 1. Flip state
+        kick_timer[i] = KICK_CYCLES + BRAKE_CYCLES;            // 2. Start total timer
+        T_cmd[i] = KICK_TORQUE;                                // 3. Start kicking
+      }
+    }
+    
+    // Constrain final torques for safety
+    T_cmd[i] = constrain(T_cmd[i], -MAX_TORQUE, MAX_TORQUE);
+  }
 
-  T1 = constrain(T1, -MAX_TORQUE, MAX_TORQUE);
-  T2 = constrain(T2, -MAX_TORQUE, MAX_TORQUE);
-  T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
+  // Send the compensated torques
+  send_torque(MOTOR_1, T_cmd[0]);
+  send_torque(MOTOR_2, T_cmd[1]);
+  send_torque(MOTOR_3, T_cmd[2]);
 
-  send_torque(MOTOR_1, 1 * T1);
-  send_torque(MOTOR_2, 1 * T2);
-  send_torque(MOTOR_3, 1 * T3);
-
+  // Buffer logging 
   if (buff_pointer < max_buff_size) {
     time_buffer[buff_pointer] = micros();
     roll_buffer[buff_pointer] = filtered_roll;
@@ -327,13 +369,15 @@ void run_controller() {
     gyroX_buffer[buff_pointer] = gyro_x;
     gyroY_buffer[buff_pointer] = gyro_y;
     gyroZ_buffer[buff_pointer] = gyro_z;
-    T1_buffer[buff_pointer] = T1;
-    T2_buffer[buff_pointer] = T2;
-    T3_buffer[buff_pointer] = T3;
+    T1_buffer[buff_pointer] = T_cmd[0];
+    T2_buffer[buff_pointer] = T_cmd[1];
+    T3_buffer[buff_pointer] = T_cmd[2];
     phi_x_buffer[buff_pointer] = phi_x;
     phi_y_buffer[buff_pointer] = phi_y;
     phi_dx_buffer[buff_pointer] = phi_dot_x;
     phi_dy_buffer[buff_pointer] = phi_dot_y;
+    
+    // Log the TRUE unmasked velocities for later dead-zone measurement analysis
     motor_vel_1_buffer[buff_pointer] = motor_true_vels[0];
     motor_vel_2_buffer[buff_pointer] = motor_true_vels[1];
     motor_vel_3_buffer[buff_pointer] = motor_true_vels[2];
@@ -363,7 +407,7 @@ void checkSerialCommands() {
 
   int index = input.indexOf('=');
   if (index == -1) {
-    Serial.println("Invalid format! Use: k0=val, k1=val, k2=val, or k3=val");
+    Serial.println("Invalid format! Use: k0, k1, k2, k3, T_max, kt, kc, bt, bc, td = val");
     return;
   }
 
@@ -382,6 +426,24 @@ void checkSerialCommands() {
   } else if (cmd.equalsIgnoreCase("k3")) {
     K_xy[3] = val;
     printActiveGains();
+  } else if (cmd.equalsIgnoreCase("T_max")) {
+    MAX_TORQUE = val;
+    printActiveGains();  
+  } else if (cmd.equalsIgnoreCase("kt")) {
+    KICK_TORQUE = val;
+    printActiveGains();  
+  } else if (cmd.equalsIgnoreCase("kc")) {
+    KICK_CYCLES = (int)val;
+    printActiveGains();  
+  } else if (cmd.equalsIgnoreCase("bt")) {
+    BRAKE_TORQUE = val;
+    printActiveGains();  
+  } else if (cmd.equalsIgnoreCase("bc")) {
+    BRAKE_CYCLES = (int)val;
+    printActiveGains();  
+  } else if (cmd.equalsIgnoreCase("td")) {
+    TORQUE_DEADBAND = val;
+    printActiveGains();  
   } else {
     Serial.print("Unknown parameter: ");
     Serial.println(cmd);
@@ -392,12 +454,19 @@ void checkSerialCommands() {
  * @brief Prints current active state matrix configuration
  */
 void printActiveGains() {
-  Serial.println("\n--- Active LQR Matrix (K_xy) ---");
-  Serial.printf("k0 (Ball Position): %.4f\n", K_xy[0]);
-  Serial.printf("k1 (Tilt Angle):    %.4f\n", K_xy[1]);
-  Serial.printf("k2 (Ball Velocity): %.4f\n", K_xy[2]);
-  Serial.printf("k3 (Gyro Rate):     %.4f\n", K_xy[3]);
-  Serial.println("---------------------------------");
+  Serial.println("\n--- Active LQR Matrix (K_xy) & Params ---");
+  Serial.printf("k0 (Ball Position):  %.4f\n", K_xy[0]);
+  Serial.printf("k1 (Tilt Angle):     %.4f\n", K_xy[1]);
+  Serial.printf("k2 (Ball Velocity):  %.4f\n", K_xy[2]);
+  Serial.printf("k3 (Gyro Rate):      %.4f\n", K_xy[3]);
+  Serial.printf("T_max:               %.4f N\n", MAX_TORQUE);
+  Serial.println("--- Backlash Compensation ---");
+  Serial.printf("Kick Torque  (kt):   %.4f Nm\n", KICK_TORQUE);
+  Serial.printf("Kick Cycles  (kc):   %d\n", KICK_CYCLES);
+  Serial.printf("Brake Torque (bt):   %.4f Nm\n", BRAKE_TORQUE);
+  Serial.printf("Brake Cycles (bc):   %d\n", BRAKE_CYCLES);
+  Serial.printf("Torq Deadband(td):   %.4f Nm\n", TORQUE_DEADBAND);
+  Serial.println("-----------------------------------------");
 }
 
 void shutdown() {
@@ -414,14 +483,6 @@ void shutdown() {
   Serial.println("------------Safely Exited Program------------");
 }
 
-//==============IMU stuff==============
-
-/*
-Behavior: interrupt service routine that runs every time the imu timer ends
-Errors: none
-Returns: none
-Arguments: none
-*/
 void IMU_ISR() {
   imu_ready = true;
 }
