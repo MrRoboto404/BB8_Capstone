@@ -55,7 +55,6 @@ sfe_ism_data_t gyroData;
 
 // THIS TIMER CONTROLS THE SPEED OF THE ENTIRE THING!!
 IntervalTimer myTimer;
-<<<<<<< HEAD
 float imu_timer_freq = 200.0;                // hz 
 
 
