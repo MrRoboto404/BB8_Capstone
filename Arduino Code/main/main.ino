@@ -50,8 +50,17 @@ SparkFun_ISM330DHCX myISM;
 sfe_ism_data_t accelData;  
 sfe_ism_data_t gyroData;   
 
+
+
+
+// THIS TIMER CONTROLS THE SPEED OF THE ENTIRE THING!!
 IntervalTimer myTimer;
-float imu_timer_freq = 200.0;                   // hz
+float imu_timer_freq = 200.0;                // hz 
+
+
+
+
+
 int imu_period = 1000000 / imu_timer_freq;  // us
 
 //____________IMU Filter____________
@@ -126,7 +135,7 @@ const float gear_ratio = 5.1769;
 //____________Direct LQR Tuning Matrix____________
 // Indices: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
 // Initialized to your original baseline values (Gain multipliers pre-applied)
-float K_xy[4] = { 0.0f, -100.0f, -0.06f, -2.3f };
+float K_xy[4] = { 0.0f, -100.0f, -0.01f, -2.3f };
 const float K_z[2] = { 0.0f, -0.05f };
 // const float K_z[2] = { 0f, 0f };
 
@@ -252,26 +261,6 @@ void loop() {
 
   // 200Hz Execution Block triggered by the Timer ISR
   if (imu_ready) {
-    imu_ready = false;  
-
-    myISM.getAccel(&accelData);
-    myISM.getGyro(&gyroData);
-
-    float ax = accelData.xData * ACCEL_SCALE;
-    float ay = accelData.yData * ACCEL_SCALE;
-    float az = accelData.zData * ACCEL_SCALE;
-    float gx = gyroData.xData * GYRO_SCALE;
-    float gy = gyroData.yData * GYRO_SCALE;
-    float gz = gyroData.zData * GYRO_SCALE;
-
-    imu_filter.update(gx, gy, gz, ax, ay, az);
-
-    filtered_roll = -imu_filter.getRoll();
-    filtered_pitch = -imu_filter.getPitch();
-    gyro_x = -gx;
-    gyro_y = -gy;
-    gyro_z = -(gz - 0.0001833806f);  
-
     if (control_run) {
       run_controller();
     }
@@ -284,12 +273,32 @@ void loop() {
 void run_controller() {
   uint32_t current_time = micros();
 
-  osc_state = !osc_state;
-  digitalWriteFast(OSC_PIN, osc_state);
+  //osc_state = !osc_state;
+  digitalWriteFast(OSC_PIN, true);
 
   float dt = (current_time - last_time) / 1000000.0f;
   if (last_time == 0) dt = 1.0 / imu_timer_freq;
   last_time = current_time;
+
+  imu_ready = false;  
+
+  myISM.getAccel(&accelData);
+  myISM.getGyro(&gyroData);
+
+  float ax = accelData.xData * ACCEL_SCALE;
+  float ay = accelData.yData * ACCEL_SCALE;
+  float az = accelData.zData * ACCEL_SCALE;
+  float gx = gyroData.xData * GYRO_SCALE;
+  float gy = gyroData.yData * GYRO_SCALE;
+  float gz = gyroData.zData * GYRO_SCALE;
+
+  imu_filter.update(gx, gy, gz, ax, ay, az);
+
+  filtered_roll = -imu_filter.getRoll();
+  filtered_pitch = -imu_filter.getPitch();
+  gyro_x = -gx;
+  gyro_y = -gy;
+  gyro_z = -(gz - 0.0001833806f);  
 
   // float psd1 = motor_true_vels[0] / gear_ratio;
   // float psd2 = motor_true_vels[1] / gear_ratio;
@@ -350,7 +359,8 @@ void run_controller() {
     motor_pos_3_buffer[buff_pointer] = motor_true_pos[2];
     buff_pointer++;
   }
-
+  
+  digitalWriteFast(OSC_PIN, false);
   uint32_t execution_time = micros() - current_time;
   if (execution_time > 5000) {
     Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
