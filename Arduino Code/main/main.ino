@@ -176,9 +176,9 @@ void setup() {
 
   myISM.setDeviceConfig();
   myISM.setBlockDataUpdate();
-  myISM.setAccelDataRate(ISM_XL_ODR_208Hz);
+  myISM.setAccelDataRate(ISM_XL_ODR_833Hz);
   myISM.setAccelFullScale(ISM_2g);
-  myISM.setGyroDataRate(ISM_GY_ODR_208Hz);
+  myISM.setGyroDataRate(ISM_GY_ODR_833Hz);
   myISM.setGyroFullScale(ISM_500dps);
 
   // myISM.setGyroFilterLP1(true);
@@ -352,7 +352,7 @@ void run_controller() {
   }
 
   uint32_t execution_time = micros() - current_time;
-  if (execution_time > 6250) {
+  if (execution_time > 5000) {
     Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
     Serial.println(execution_time);
   }
