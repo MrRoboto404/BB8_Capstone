@@ -51,7 +51,7 @@ sfe_ism_data_t accelData;
 sfe_ism_data_t gyroData;   
 
 IntervalTimer myTimer;
-float imu_timer_freq = 200.0;                   // hz
+float imu_timer_freq = 400.0;                   // hz
 int imu_period = 1000000 / imu_timer_freq;  // us
 
 //____________IMU Filter____________
