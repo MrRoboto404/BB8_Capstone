@@ -1,82 +1,108 @@
-/*========================INCLUDES========================*/
-#include <FlexCAN_T4.h>
+//=============================================================================================
+//              UW Mechanical Engineering Dept — Mechatronics 2026 Ballbot
+//=============================================================================================
+/*  This is the code used to flash the Teensy 4.0 microcontroller for the Ballbot group.
+    Controller Design:    Jonathan Pham
+    Motor Communication:  Ryan Stokes (rtstokes05@gmail.com)
+    IMU filtering:        Benedict Chandra
+    IMU communication:    Dante Rieger
+    Readability:          Ryan Stokes  */
+//=============================================================================================
+
+
+/*================================================ INCLUDES ================================================*/
+// Generic
 #include <stdio.h>
+#include <math.h>
+
+// IMU communication
 #include <Wire.h>
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
-#include <Bounce2.h>
-#include <math.h>
+
+// IMU Filtering
 #include "Filter.h"
+
+// CAN bus 
+#include <FlexCAN_T4.h>
+
+// Software-based debouncer
+#include <Bounce2.h>
+
+// SD card
 #include <SPI.h>
 #include <SdFat.h>
 
 
 
-/*========================GLOBAL DECLARATIONS========================*/
-//____________CAN Setup____________
-//------Constants------
-#define MOTOR_1 (0x01 << 5)
-#define MOTOR_2 (0x02 << 5)
-#define MOTOR_3 (0x03 << 5)
+/*================================================ GLOBAL DECLARATIONS ================================================*/
+//________________________ CAN Setup ________________________
+//------CAN Constants------
+#define MOTOR_1 (0x01 << 5) // configured in ODrive GUI
+#define MOTOR_2 (0x02 << 5) // configured in ODrive GUI
+#define MOTOR_3 (0x03 << 5) // configured in ODrive GUI
 
-#define SET_TORQUE (0x00E)
+// Commands on ODrive documentation
+#define SET_TORQUE (0x00E) 
 #define GET_ENCODER (0x09)
 #define MOTOR_STATE (0x07)
 #define SET_ABS_POS (0x19)
 #define GET_ERROR (0x03)
 #define CLEAR_ERRORS (0x018)
 
-#define SWITCH_PIN 14
-#define OSC_PIN 16
+#define ERROR_DC_OVERCURRENT (0x00100000) // Verified error code
+#define ERROR_UNDERVOLTAGE (0x00000200)   // Verified error code
 
-#define ERROR_ESTOP_REQ (0x00000002)
-#define ERROR_OVERVOLTAGE (0x00000100)
-#define ERROR_UNDERVOLTAGE (0x00000200)
-#define ERROR_DC_OVERCURRENT (0x00100000)
-#define ERROR_OVERREGEN (0x00000800)
-#define ERROR_OVERCURRENT (0x00001000)
+#define ERROR_ESTOP_REQ (0x00000002)   // Unverified guess of error code
+#define ERROR_OVERVOLTAGE (0x00000100) // Unverified guess of error code
+#define ERROR_OVERREGEN (0x00000800)   // Unverified guess of error code
+#define ERROR_OVERCURRENT (0x00001000) // Unverified guess of error code
 
-//------Global Variables------
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // wired to CAN2
-int MOTOR_IDS[3] = { MOTOR_1, MOTOR_2, MOTOR_3 };
-volatile float motor_true_vels[3]; 
-volatile float motor_true_pos[3];  
-int axis_state = 1;                 
-float vel;                          
-bool errored = false;
+//------CAN Global Variables------
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // wired to CAN2 physically
 
-//____________IMU____________
+// arrays to be passed around
+int MOTOR_IDS[3] = { MOTOR_1, MOTOR_2, MOTOR_3 }; 
+volatile float motor_true_vels[3]; // rev/s
+volatile float motor_true_pos[3];  // rev
+
+int axis_state = 1; // defualts to idle state
+bool errored = false; // monitors if any drivers have errored
+
+
+
+//________________________ IMU ________________________
 SparkFun_ISM330DHCX myISM;
-sfe_ism_data_t accelData;  
-sfe_ism_data_t gyroData;   
+sfe_ism_data_t accelData; // holds readings 
+sfe_ism_data_t gyroData; // holds readings
 
-
-
-
-// THIS TIMER CONTROLS THE SPEED OF THE ENTIRE THING!!
+//!!!THIS TIMER CONTROLS THE SPEED OF THE ENTIRE THING!!!
 IntervalTimer myTimer;
-float imu_timer_freq = 200.0;                // hz 
+float imu_timer_freq = 200.0;  // Hz 
+int imu_period = 1000000 / imu_timer_freq;  // µs
 
-
-
-
-
-=======
-float imu_timer_freq = 200.0;                   // hz
-int imu_period = 1000000 / imu_timer_freq;  // us
-
-//____________IMU Filter____________
-const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f;         
+//------IMU Filter------
+const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f; 
 const float GYRO_SCALE = (1.0f / 1000.0f) * PI / 180.0f;  
-const float BETA = 0.02f;                                 
-Filter imu_filter((float)imu_timer_freq, BETA);
-volatile bool imu_ready = false;
+const float BETA = 0.02f; // tuned weight
 
-//_____________IMU Buffers________________
+Filter imu_filter((float)imu_timer_freq, BETA);
+
+volatile bool imu_ready = false; // defaults to unready
+
+// Used by controller
+float filtered_roll = 0.0f;   
+float filtered_pitch = 0.0f;  
+float gyro_x = 0.0f;          
+float gyro_y = 0.0f;          
+float gyro_z = 0.0f;   
+
+//------IMU Buffers for Data------
 int buff_pointer = 0;
-const int max_buff_size = 200 * 10;  
+const int max_buff_size = imu_timer_freq * 10; // always 10 seconds of data 
 unsigned long time_buffer[max_buff_size];
 unsigned long save_time;
+
 float roll_buffer[max_buff_size];
 float pitch_buffer[max_buff_size];
 
@@ -102,14 +128,9 @@ float motor_pos_1_buffer[max_buff_size];
 float motor_pos_2_buffer[max_buff_size];
 float motor_pos_3_buffer[max_buff_size];
 
-// Controller inputs
-float filtered_roll = 0.0f;   
-float filtered_pitch = 0.0f;  
-float gyro_x = 0.0f;          
-float gyro_y = 0.0f;          
-float gyro_z = 0.0f;          
 
-//____________LQR & Controller Setup____________
+
+//________________________ LQR & Controller Setup ________________________
 uint32_t last_time = 0;
 float phi_x = 0.0;
 float phi_y = 0.0;
@@ -119,7 +140,8 @@ const float rW = 0.048;          // wheel radius (m)
 const float rB = 0.12;           // ball radius (m)
 const float alpha_rad = 0.785;   // 45 degrees
 const float beta_rad = 0.0;      // Alignment offset
-float MAX_TORQUE = 0.23f;  
+float MAX_TORQUE = 0.23f;        // saturation torque of motors (Nm, pre-gearing)
+const float gear_ratio = 5.1769;
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -127,32 +149,39 @@ const float SQRT_3 = 1.73205081f;
 const float SQRT_6 = 2.44948974f;
 const float CSC_35 = 1.74344679f; 
 const float SEC_35 = 1.22077458f;
-const float cA = cos(alpha_rad);
-const float cB = cos(beta_rad);
-const float sB = sin(beta_rad);
+const float cA = cos(alpha_rad); // radians
+const float cB = cos(beta_rad); // radians
+const float sB = sin(beta_rad); // radians
 
-const float gear_ratio = 5.1769;
-
-
-//____________Direct LQR Tuning Matrix____________
-// Indices: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
+//------Direct LQR Tuning Matrix------
 // Initialized to your original baseline values (Gain multipliers pre-applied)
-float K_xy[4] = { 0.0f, -100.0f, -0.01f, -2.3f };
-const float K_z[2] = { 0.0f, -0.05f };
-// const float K_z[2] = { 0f, 0f };
+float K_xy[4] = { 0.0f, -100.0f, -0.01f, -2.3f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
+const float K_z[2] = { 0.0f, -0.05f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta)
 
-//____________Switches____________
-Bounce debouncer = Bounce();
-bool control_run = false;  
 
-//____________Oscilloscope Verification____________
-bool osc_state = false;
 
-//______SD Card Reading______
+//________________________ Switches ________________________
+#define SWITCH_PIN 14 // control switch wired to pin 14 on teensy 4.0
+Bounce debouncer = Bounce(); // software-based switch debouncer
+bool control_run = false; // defaults to inactive controller
+
+
+
+//________________________ Oscilloscope Verification ________________________
+#define OSC_PIN 16 // oscilloscope output wired to pin 16 on teensy 4.0
+bool osc_state = false; // defaults to low
+
+
+
+//________________________ SD Card ________________________
 SdFat sd;
 FsFile my_file;
 
-/*========================CORE LOGIC========================*/
+
+
+
+
+/*================================================ DEFINITIONS ================================================*/
 
 /**
  * @brief Initializes IMU communication, CAN communication, motor states,
@@ -160,7 +189,7 @@ FsFile my_file;
  * 
  * @return None
  * 
- * @note Errors not yet implemented
+ * @note  Handles SD card read error
  */
 void setup() {
   delay(1000);
@@ -191,10 +220,6 @@ void setup() {
   myISM.setAccelFullScale(ISM_2g);
   myISM.setGyroDataRate(ISM_GY_ODR_833Hz);
   myISM.setGyroFullScale(ISM_500dps);
-
-  // myISM.setGyroFilterLP1(true);
-  // myISM.setGyroLP1Bandwidth(ISM_MEDIUM);  
-  // myISM.setAccelSlopeFilter(ISM_LP_ODR_DIV_10);  
 
   /*____________________________IMU CALIBRATION____________________________*/
   imu_filter.begin();
@@ -523,16 +548,16 @@ void motors_reset_position(void) {
 }
 
 float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
-    float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
-    float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
-    float term3 = cY * (rW * CSC_35 * (dp2 + dp3) + 3.0f * rB * dthx);
-    return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
+  float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
+  float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
+  float term3 = cY * (rW * CSC_35 * (dp2 + dp3) + 3.0f * rB * dthx);
+  return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
 }
 
 float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
-    float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
-    float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
-    return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
+  float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
+  float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
+  return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
 }
 
 void save_all_data_to_one_CSV() {
