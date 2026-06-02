@@ -478,7 +478,7 @@ void printActiveGains() {
   Serial.printf("k1 (Tilt Angle):    %.4f\n", K_xy[1]);
   Serial.printf("k2 (Ball Velocity): %.4f\n", K_xy[2]);
   Serial.printf("k3 (Gyro Rate):     %.4f\n", K_xy[3]);
-  Serial.printf("T_max :             %.4fN\n", MAX_TORQUE);
+  Serial.printf("T_max :             %.4fNm\n", MAX_TORQUE);
   Serial.printf("kz1 (Yaw Angle):    %.4f\n", K_z[0]);
   Serial.printf("kz2 (Yaw Rate):     %.4f\n", K_z[1]);
   Serial.println("-----------------------------------------");
@@ -662,7 +662,7 @@ void save_all_data_to_one_CSV() {
   // Display saving status
   unsigned long save_time = micros();
   char filename[40];
-  sprintf(filename, "%lu_motor_data.csv", save_time);
+  sprintf(filename, "%lu_data.csv", save_time);
 
   Serial.print(" |  Creating master log: ");
   Serial.println(filename);
