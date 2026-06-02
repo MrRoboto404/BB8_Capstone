@@ -2,11 +2,11 @@
 //              UW Mechanical Engineering Dept — Mechatronics 2026 Ballbot
 //=============================================================================================
 /*  This is the code used to flash the Teensy 4.0 microcontroller for the Ballbot group.
-    Controller Design:    Jonathan Pham
-    Motor Communication:  Ryan Stokes (rtstokes05@gmail.com)
-    IMU filtering:        Benedict Chandra
-    IMU communication:    Dante Rieger
-    Readability:          Ryan Stokes  */
+    Controller Design:      Jonathan Pham (hieupham0927@gmail.com)
+    Motor Communication:    Ryan Stokes (rtstokes05@gmail.com)
+    IMU filtering:          Benedict Chandra
+    IMU & SD communication: Dante Rieger
+    Readability:            Ryan Stokes  */
 //=============================================================================================
 
 
@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <math.h>
 
-// IMU communication
+// IMU communication (I2C)
 #include <Wire.h>
 #include <SparkFun_ISM330DHCX.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
@@ -29,7 +29,7 @@
 // Software-based debouncer
 #include <Bounce2.h>
 
-// SD card
+// SD card (SPI)
 #include <SPI.h>
 #include <SdFat.h>
 
@@ -38,17 +38,19 @@
 /*================================================ GLOBAL DECLARATIONS ================================================*/
 //________________________ CAN Setup ________________________
 //------CAN Constants------
-#define MOTOR_1 (0x01 << 5) // configured in ODrive GUI
-#define MOTOR_2 (0x02 << 5) // configured in ODrive GUI
-#define MOTOR_3 (0x03 << 5) // configured in ODrive GUI
+#define MOTOR_1 (0x01 << 5) // Configured in ODrive GUI
+#define MOTOR_2 (0x02 << 5) // Configured in ODrive GUI
+#define MOTOR_3 (0x03 << 5) // Configured in ODrive GUI
 
 // Commands on ODrive documentation
-#define SET_TORQUE (0x00E) 
-#define GET_ENCODER (0x09)
 #define MOTOR_STATE (0x07)
-#define SET_ABS_POS (0x19)
-#define GET_ERROR (0x03)
 #define CLEAR_ERRORS (0x018)
+#define SET_TORQUE (0x00E) 
+#define SET_ABS_POS (0x19)
+#define GET_ENCODER (0x09)
+#define GET_ERROR (0x03)
+#define GET_TORQUE (0x01C)
+
 
 #define ERROR_DC_OVERCURRENT (0x00100000) // Verified error code
 #define ERROR_UNDERVOLTAGE (0x00000200)   // Verified error code
@@ -59,36 +61,37 @@
 #define ERROR_OVERCURRENT (0x00001000) // Unverified guess of error code
 
 //------CAN Global Variables------
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // wired to CAN2 physically
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> Can2;  // Wired to CAN2 physically
 
 // arrays to be passed around
 int MOTOR_IDS[3] = { MOTOR_1, MOTOR_2, MOTOR_3 }; 
 volatile float motor_true_vels[3]; // rev/s
 volatile float motor_true_pos[3];  // rev
+volatile float motor_true_torqs[3];  // Nm, pre-gearing
 
-int axis_state = 1; // defualts to idle state
-bool errored = false; // monitors if any drivers have errored
+int axis_state = 1; // Defaults to idle state
+bool errored = false; // Monitors if any drivers have errored
 
 
 
 //________________________ IMU ________________________
 SparkFun_ISM330DHCX myISM;
-sfe_ism_data_t accelData; // holds readings 
-sfe_ism_data_t gyroData; // holds readings
+sfe_ism_data_t accelData; // Holds readings 
+sfe_ism_data_t gyroData; // Holds readings
 
 //!!!THIS TIMER CONTROLS THE SPEED OF THE ENTIRE THING!!!
 IntervalTimer myTimer;
-float imu_timer_freq = 200.0;  // Hz 
+const float imu_timer_freq = 200.0;  // Hz 
 int imu_period = 1000000 / imu_timer_freq;  // µs
 
 //------IMU Filter------
 const float ACCEL_SCALE = 1.0f / 1000.0f * 9.81f; 
 const float GYRO_SCALE = (1.0f / 1000.0f) * PI / 180.0f;  
-const float BETA = 0.02f; // tuned weight
+const float BETA = 0.02f; // Tuned weight
 
 Filter imu_filter((float)imu_timer_freq, BETA);
 
-volatile bool imu_ready = false; // defaults to unready
+volatile bool imu_ready = false; // Defaults to unready. Readies only when the timer ISR is trigged
 
 // Used by controller
 float filtered_roll = 0.0f;   
@@ -99,7 +102,7 @@ float gyro_z = 0.0f;
 
 //------IMU Buffers for Data------
 int buff_pointer = 0;
-const int max_buff_size = imu_timer_freq * 10; // always 10 seconds of data 
+const int max_buff_size = imu_timer_freq * 10; // Always 10 seconds of data 
 unsigned long time_buffer[max_buff_size];
 unsigned long save_time;
 
@@ -128,6 +131,10 @@ float motor_pos_1_buffer[max_buff_size];
 float motor_pos_2_buffer[max_buff_size];
 float motor_pos_3_buffer[max_buff_size];
 
+float motor_torq_1_buffer[max_buff_size];
+float motor_torq_2_buffer[max_buff_size];
+float motor_torq_3_buffer[max_buff_size];
+
 
 
 //________________________ LQR & Controller Setup ________________________
@@ -141,7 +148,7 @@ const float rB = 0.12;           // ball radius (m)
 const float alpha_rad = 0.785;   // 45 degrees
 const float beta_rad = 0.0;      // Alignment offset
 float MAX_TORQUE = 0.23f;        // saturation torque of motors (Nm, pre-gearing)
-const float gear_ratio = 5.1769;
+const float gear_ratio = 5.177;
 
 // Precompute constants
 const float SQRT_2 = 1.41421356f;
@@ -155,8 +162,8 @@ const float sB = sin(beta_rad); // radians
 
 //------Direct LQR Tuning Matrix------
 // Initialized to your original baseline values (Gain multipliers pre-applied)
-float K_xy[4] = { 0.0f, -100.0f, -0.01f, -2.3f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
-const float K_z[2] = { 0.0f, -0.05f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta)
+float K_xy[4] = { 0.0f, -100.0f, -0.03f, -3.0f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta), [2]=Ball Vel (phi_dot), [3]=Tilt Rate (theta_dot)
+float K_z[2] = { -0.2f, -0.6f }; // Indicies: [0]=Ball Pos (phi), [1]=Tilt (theta)
 
 
 
@@ -181,26 +188,26 @@ FsFile my_file;
 
 
 
-/*================================================ DEFINITIONS ================================================*/
+/*================================================ FUNCTION DEFINITIONS ================================================*/
 
 /**
- * @brief Initializes IMU communication, CAN communication, motor states,
-                determines gyro bias, [LIST OTHERS]
+ * @brief Initializes all types of device communications, readies motors and control switch, and connects to the SD card.
  * 
  * @return None
  * 
- * @note  Handles SD card read error
+ * @note  Must have SD card inserted to exit setup.
  */
 void setup() {
   delay(1000);
   Serial.begin(9600);
-  Serial.println("------------Beginning Setup------------");
+  Serial.println("Beginning Setup...");
+
 
   /*____________________________IMU____________________________*/
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock(400000); // Hz (Fast mode)
   while (!myISM.begin()) {
-    Serial.println("Failed to connect to IMU!");
+    Serial.println(" |   Failed to connect to IMU!");
     delay(500);
   }
 
@@ -211,7 +218,7 @@ void setup() {
     delay(1);
   }
 
-  Serial.println("IMU successfully reset\nApplying settings");
+  Serial.println(" |   IMU successfully reset.\n |   Applying settings...");
   delay(100);
 
   myISM.setDeviceConfig();
@@ -220,6 +227,8 @@ void setup() {
   myISM.setAccelFullScale(ISM_2g);
   myISM.setGyroDataRate(ISM_GY_ODR_833Hz);
   myISM.setGyroFullScale(ISM_500dps);
+  Serial.println(" |   Done.");
+
 
   /*____________________________IMU CALIBRATION____________________________*/
   imu_filter.begin();
@@ -227,15 +236,17 @@ void setup() {
 
   myTimer.begin(IMU_ISR, imu_period);
 
+
   /*_________________________CAN/MOTORS_______________________*/
   Can2.begin();
-  Can2.setBaudRate(500000);  
+  Can2.setBaudRate(1000000);  
   Can2.enableMBInterrupts();
   Can2.onReceive(can_sniff);
 
   motors_reset_position();        
   axis_state = 1;                 
   set_motors_states(axis_state);  
+
 
   /*_________________________SWITCHES_______________________*/
   pinMode(SWITCH_PIN, INPUT_PULLUP);
@@ -244,28 +255,36 @@ void setup() {
 
   pinMode(OSC_PIN, OUTPUT);
 
-  Serial.println("------------Completed Setup.------------");
 
   /*_______________SD CARD SETUP_____________________________*/
-  Serial.println("Starting SD card");
+  Serial.println(" |   Connecting to SD card...");
   while (!sd.begin(10, SD_SCK_MHZ(1))) {
-    Serial.println("FISH");
+    Serial.println(" |   Failed to connect to SD Card!");
     delay(100);
   }
-  Serial.println("CAUGHT SOME FISH!");
+  Serial.println(" |   Connected to SD.");
+
+  // Ack
+  Serial.println("____________Completed Setup____________");
   
   // Print initial active tuning matrix
   printActiveGains();
 }
 
+/**
+ * @brief Main loop.
+ * 
+ * @return None
+ * 
+ * @note When ON, allows IMU ISR to run the controller. When OFF, IMU ISR still runs but does not enage controller.
+ */
 void loop() {
-  // Always listen for CAN events regardless of state
-  Can2.events();
+  /*____________________________ Checks outside of ISR ____________________________*/
+  Can2.events(); // CAN messages
+  checkSerialCommands(); // Serial gain changes
 
-  // Handle live serial data asynchronously outside the critical 200Hz step
-  checkSerialCommands();
 
-  // Detect if control switch has been flicked
+  /*____________________________ Control Switch Updating ____________________________*/
   debouncer.update();
   if (debouncer.changed()) {
     control_run = (debouncer.read() == LOW);
@@ -286,8 +305,32 @@ void loop() {
     }
   }
 
-  // 200Hz Execution Block triggered by the Timer ISR
-  if (imu_ready) {
+
+  /*____________________________ ISR-Dependent ____________________________*/
+  if (imu_ready) { // when ISR flag switches
+    imu_ready = false;  
+
+    // Retrieve data
+    myISM.getAccel(&accelData);
+    myISM.getGyro(&gyroData);
+
+    // Filter data
+    float ax = accelData.xData * ACCEL_SCALE;
+    float ay = accelData.yData * ACCEL_SCALE;
+    float az = accelData.zData * ACCEL_SCALE;
+    float gx = gyroData.xData * GYRO_SCALE;
+    float gy = gyroData.yData * GYRO_SCALE;
+    float gz = gyroData.zData * GYRO_SCALE;
+
+    imu_filter.update(gx, gy, gz, ax, ay, az);
+
+    filtered_roll = -imu_filter.getRoll();
+    filtered_pitch = -imu_filter.getPitch();
+    gyro_x = -gx;
+    gyro_y = -gy;
+    gyro_z = -(gz - 0.0001833806f);  
+
+    // If control switch is on, enable action on the readings
     if (control_run) {
       run_controller();
     }
@@ -300,40 +343,16 @@ void loop() {
 void run_controller() {
   uint32_t current_time = micros();
 
-  //osc_state = !osc_state;
-  digitalWriteFast(OSC_PIN, true);
+  osc_state = !osc_state;
+  digitalWriteFast(OSC_PIN, osc_state);
 
   float dt = (current_time - last_time) / 1000000.0f;
   if (last_time == 0) dt = 1.0 / imu_timer_freq;
   last_time = current_time;
 
-  imu_ready = false;  
-
-  myISM.getAccel(&accelData);
-  myISM.getGyro(&gyroData);
-
-  float ax = accelData.xData * ACCEL_SCALE;
-  float ay = accelData.yData * ACCEL_SCALE;
-  float az = accelData.zData * ACCEL_SCALE;
-  float gx = gyroData.xData * GYRO_SCALE;
-  float gy = gyroData.yData * GYRO_SCALE;
-  float gz = gyroData.zData * GYRO_SCALE;
-
-  imu_filter.update(gx, gy, gz, ax, ay, az);
-
-  filtered_roll = -imu_filter.getRoll();
-  filtered_pitch = -imu_filter.getPitch();
-  gyro_x = -gx;
-  gyro_y = -gy;
-  gyro_z = -(gz - 0.0001833806f);  
-
-  // float psd1 = motor_true_vels[0] / gear_ratio;
-  // float psd2 = motor_true_vels[1] / gear_ratio;
-  // float psd3 = motor_true_vels[2] / gear_ratio;
-  // Convert rev/s to rad/s by multiplying by 2*PI, then apply gear ratio
-  float psd1 = (motor_true_vels[0] * 2.0f * PI) / gear_ratio;
-  float psd2 = (motor_true_vels[1] * 2.0f * PI) / gear_ratio;
-  float psd3 = (motor_true_vels[2] * 2.0f * PI) / gear_ratio;
+  float psd1 = motor_true_vels[0] / gear_ratio;
+  float psd2 = motor_true_vels[1] / gear_ratio;
+  float psd3 = motor_true_vels[2] / gear_ratio;
 
   float sX = sin(filtered_roll);
   float cX = cos(filtered_roll);
@@ -384,12 +403,14 @@ void run_controller() {
     motor_pos_1_buffer[buff_pointer] = motor_true_pos[0];
     motor_pos_2_buffer[buff_pointer] = motor_true_pos[1];
     motor_pos_3_buffer[buff_pointer] = motor_true_pos[2];
+    motor_torq_1_buffer[buff_pointer] = motor_true_torqs[0];
+    motor_torq_2_buffer[buff_pointer] = motor_true_torqs[1];
+    motor_torq_3_buffer[buff_pointer] = motor_true_torqs[2];
     buff_pointer++;
   }
-  
-  digitalWriteFast(OSC_PIN, false);
+
   uint32_t execution_time = micros() - current_time;
-  if (execution_time > 5000) {
+  if (execution_time > 6250) {
     Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
     Serial.println(execution_time);
   }
@@ -430,6 +451,14 @@ void checkSerialCommands() {
   } else if (cmd.equalsIgnoreCase("T_max")){
     MAX_TORQUE = val;
     printActiveGains();  
+  }
+    else if (cmd.equalsIgnoreCase("kz1")){
+    K_z[0] = val;
+    printActiveGains();  
+  }
+    else if (cmd.equalsIgnoreCase("kz2")){
+    K_z[1] = val;
+    printActiveGains();  
   } else {
     Serial.print("Unknown parameter: ");
     Serial.println(cmd);
@@ -445,19 +474,25 @@ void printActiveGains() {
   Serial.printf("k1 (Tilt Angle):    %.4f\n", K_xy[1]);
   Serial.printf("k2 (Ball Velocity): %.4f\n", K_xy[2]);
   Serial.printf("k3 (Gyro Rate):     %.4f\n", K_xy[3]);
-  Serial.printf("T_max :             %.4f\n N", MAX_TORQUE);
+  Serial.printf("T_max :             %.4fN\n", MAX_TORQUE);
+  Serial.printf("kz1 (Yaw Angle):    %.4f\n", K_z[0]);
+  Serial.printf("kz2 (Yaw Rate):     %.4f\n", K_z[1]);
   Serial.println("-----------------------------------------");
 }
 
-void shutdown() {
-  Serial.println("------------Exit Requested------------");
+void shutdown(bool has_errored) {
+  if (!has_errored){
+    Serial.println("------------Safe Exit Requested------------");
+  } else{
+    Serial.println("------------Error Detected------------");
+  }
+  Serial.println(" |  Shutting down...");
   send_torque(MOTOR_1, 0.0);
   send_torque(MOTOR_2, 0.0);
   send_torque(MOTOR_3, 0.0);
 
   axis_state = 1;
-  set_motors_states(axis_state);  
-
+  set_motors_states(axis_state);
   save_all_data_to_one_CSV();
   buff_pointer = 0;
   Serial.println("------------Safely Exited Program------------");
@@ -482,25 +517,28 @@ void can_sniff(const CAN_message_t& msg) {
   if (cmd == GET_ENCODER) {
     motor_true_pos[node - 1] = *reinterpret_cast<const float*>(msg.buf);
     motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
+  } else if (cmd == GET_TORQUE){
+    motor_true_torqs[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
   } else if (cmd == GET_ERROR) {
     uint32_t errors_raw = *reinterpret_cast<const uint32_t*>(msg.buf + 4);
     uint32_t errors = __builtin_bswap32(errors_raw);  
     if (errors == 0) return;
 
     if (!errored) {
-      shutdown();
+      shutdown(true);
       Serial.println("!!!!!!!!!!!!ERROR DETECTED!!!!!!!!!!!!");
+      Serial.printf("Motor %d:\n", node);
+      if (errors & ERROR_OVERVOLTAGE)    Serial.println("  - OVERVOLTAGE");
+      if (errors & ERROR_UNDERVOLTAGE)   Serial.println("  - UNDERVOLTAGE");
+      if (errors & ERROR_DC_OVERCURRENT) Serial.println("  - DC_OVERCURRENT");
+      if (errors & ERROR_OVERREGEN)      Serial.println("  - OVER_REGEN");
+      if (errors & ERROR_OVERCURRENT)    Serial.println("  - OVERCURRENT");
+      if (errors & ERROR_ESTOP_REQ)      Serial.println("  - ESTOP REQ");
+      Serial.println();
       errored = true;
     }
 
-    Serial.printf("Motor %d:\n", node);
-    if (errors & ERROR_OVERVOLTAGE)    Serial.println("  - OVERVOLTAGE");
-    if (errors & ERROR_UNDERVOLTAGE)   Serial.println("  - UNDERVOLTAGE");
-    if (errors & ERROR_DC_OVERCURRENT) Serial.println("  - DC_OVERCURRENT");
-    if (errors & ERROR_OVERREGEN)      Serial.println("  - OVER_REGEN");
-    if (errors & ERROR_OVERCURRENT)    Serial.println("  - OVERCURRENT");
-    if (errors & ERROR_ESTOP_REQ)      Serial.println("  - ESTOP REQ");
-    Serial.println();
+
   }
 }
 
@@ -548,16 +586,16 @@ void motors_reset_position(void) {
 }
 
 float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
-  float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
-  float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
-  float term3 = cY * (rW * CSC_35 * (dp2 + dp3) + 3.0f * rB * dthx);
-  return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
+    float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
+    float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
+    float term3 = cY * (rW * CSC_35 * (dp2 + dp3) + 3.0f * rB * dthx);
+    return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
 }
 
 float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
-  float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
-  float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
-  return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
+    float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
+    float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
+    return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
 }
 
 void save_all_data_to_one_CSV() {
@@ -565,16 +603,16 @@ void save_all_data_to_one_CSV() {
   char filename[40];
   sprintf(filename, "%lu_motor_data.csv", save_time);
 
-  Serial.print("Creating master log: ");
+  Serial.print(" |  Creating master log: ");
   Serial.println(filename);
 
   my_file = sd.open(filename, FILE_WRITE);
   if (!my_file) {
-    Serial.println("Failed to open master log!");
+    Serial.println(" |  Failed to open master log!");
     return;
   }
 
-  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3");
+  my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3,motor_torq_1,motor_torq_2,motor_torq_3");
 
   for (int i = 0; i < buff_pointer; i++) {
     my_file.print(time_buffer[i]);     my_file.print(",");
@@ -595,10 +633,14 @@ void save_all_data_to_one_CSV() {
     my_file.print(motor_vel_3_buffer[i], 4); my_file.print(",");
     my_file.print(motor_pos_1_buffer[i], 4); my_file.print(",");
     my_file.print(motor_pos_2_buffer[i], 4); my_file.print(",");
-    my_file.println(motor_pos_3_buffer[i], 4);
+    my_file.print(motor_pos_3_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_torq_1_buffer[i], 4); my_file.print(",");
+    my_file.print(motor_torq_2_buffer[i], 4); my_file.print(",");
+    my_file.println(motor_torq_3_buffer[i], 4);
+
     
   }
 
   my_file.close();
-  Serial.println("Master log saved. FISH ARE IN ONE BUCKET!");
+  Serial.println(" |  Master log saved.");
 }
