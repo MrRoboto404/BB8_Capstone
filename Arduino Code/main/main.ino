@@ -338,18 +338,22 @@ void loop() {
 }
 
 /**
- * @brief Executes LQR math and outputs torque to the motors using live K_xy gains
+ * @brief Executes LQR math and outputs torque to the motors using live planar gains.
+ * 
+ * @note Must execute controller within 1 BTI.
  */
 void run_controller() {
-  uint32_t current_time = micros();
-
+  // invert state on oscillation pin
   osc_state = !osc_state;
   digitalWriteFast(OSC_PIN, osc_state);
 
+  // find discrete step in time from last run
+  uint32_t current_time = micros();
   float dt = (current_time - last_time) / 1000000.0f;
   if (last_time == 0) dt = 1.0 / imu_timer_freq;
   last_time = current_time;
 
+  // Calculate or read minimal states
   float psd1 = motor_true_vels[0] / gear_ratio;
   float psd2 = motor_true_vels[1] / gear_ratio;
   float psd3 = motor_true_vels[2] / gear_ratio;
@@ -365,24 +369,23 @@ void run_controller() {
   phi_x += phi_dot_x * dt;
   phi_y += phi_dot_y * dt;
 
-  // LQR calculation using the live modified elements of K_xy
+  // LQR calculation of planar torques using serial-updateable gains
   float Tx = (K_xy[0] * phi_x + K_xy[1] * filtered_roll + K_xy[2] * phi_dot_x + K_xy[3] * gyro_x);
   float Ty = -(K_xy[0] * phi_y + K_xy[1] * filtered_pitch + K_xy[2] * phi_dot_y + K_xy[3] * gyro_y);
   float Tz = -(K_z[1] * gyro_z);
-
+  // Convert planar torques into motor torques
   float T1 = (1.0 / (3.0 * gear_ratio)) * (Tz + (2.0 / cA) * (Tx * cB - Ty * sB));
   float T2 = (1.0 / (3.0 * gear_ratio)) * (Tz + (1.0 / cA) * (sB * (-SQRT_3 * Tx + Ty) - cB * (Tx + SQRT_3 * Ty)));
   float T3 = (1.0 / (3.0 * gear_ratio)) * (Tz + (1.0 / cA) * (sB * (SQRT_3 * Tx + Ty) + cB * (-Tx + SQRT_3 * Ty)));
-  
-
+  // Saturate and send
   T1 = constrain(T1, -MAX_TORQUE, MAX_TORQUE);
   T2 = constrain(T2, -MAX_TORQUE, MAX_TORQUE);
   T3 = constrain(T3, -MAX_TORQUE, MAX_TORQUE);
-
   send_torque(MOTOR_1, 1 * T1);
   send_torque(MOTOR_2, 1 * T2);
   send_torque(MOTOR_3, 1 * T3);
 
+  // Data collection
   if (buff_pointer < max_buff_size) {
     time_buffer[buff_pointer] = micros();
     roll_buffer[buff_pointer] = filtered_roll;
@@ -409,8 +412,9 @@ void run_controller() {
     buff_pointer++;
   }
 
+  // Ensure total runtime of controller is within designed BTI
   uint32_t execution_time = micros() - current_time;
-  if (execution_time > 6250) {
+  if (execution_time > imu_period) {
     Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
     Serial.println(execution_time);
   }
