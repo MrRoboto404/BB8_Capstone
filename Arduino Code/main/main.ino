@@ -291,7 +291,7 @@ void loop() {
 
     if (!control_run) {
       Serial.println("Control Switch is OFF - Disabling Torques");
-      shutdown();
+      shutdown(false);
     } else {
       Serial.println("Control Switch is ON - Engaging LQR");
       clear_errors();  
@@ -414,7 +414,7 @@ void run_controller() {
 
   // Ensure total runtime of controller is within designed BTI
   uint32_t execution_time = micros() - current_time;
-  if (execution_time > imu_period) {
+  if (execution_time > (uint32_t)imu_period) {
     Serial.print("CRITICAL: Overrun detected! Execution took (us): ");
     Serial.println(execution_time);
   }
@@ -484,50 +484,61 @@ void printActiveGains() {
   Serial.println("-----------------------------------------");
 }
 
+/**
+ * @brief Allows control loop to turn off motors, log data, and set motors to idle
+ * 
+ * @param has_errored True only when motors error (from can_sniff)
+ */
 void shutdown(bool has_errored) {
+  // Check if it is due to an error sent by the CAN bus (only source)
   if (!has_errored){
     Serial.println("------------Safe Exit Requested------------");
   } else{
     Serial.println("------------Error Detected------------");
   }
   Serial.println(" |  Shutting down...");
+  // Turn motors off and idle
   send_torque(MOTOR_1, 0.0);
   send_torque(MOTOR_2, 0.0);
   send_torque(MOTOR_3, 0.0);
-
   axis_state = 1;
   set_motors_states(axis_state);
+
+  // Save data and reset
   save_all_data_to_one_CSV();
   buff_pointer = 0;
+
   Serial.println("------------Safely Exited Program------------");
 }
 
-//==============IMU stuff==============
-
-/*
-Behavior: interrupt service routine that runs every time the imu timer ends
-Errors: none
-Returns: none
-Arguments: none
-*/
+/**
+ * @brief The IMU ISR's only job is to turn the flag back on, such that the main loop can re-read IMU data
+ */
 void IMU_ISR() {
   imu_ready = true;
 }
 
+/**
+ * @brief Monitors the CAN bus via built-in mailboxes. Needs to be extremely lightweight.
+ * 
+ * @param msg Pre-allocated CAN message
+ */
 void can_sniff(const CAN_message_t& msg) {
+  // Decode ODrive node ID and command ID
   uint8_t node = msg.id >> 5;   
   uint8_t cmd = msg.id & 0x1F;  
 
   if (cmd == GET_ENCODER) {
-    motor_true_pos[node - 1] = *reinterpret_cast<const float*>(msg.buf);
-    motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
+    motor_true_pos[node - 1] = *reinterpret_cast<const float*>(msg.buf); // first four pairs are position
+    motor_true_vels[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4); // second four pairs are velocity
   } else if (cmd == GET_TORQUE){
-    motor_true_torqs[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4);
+    motor_true_torqs[node - 1] = *reinterpret_cast<const float*>(msg.buf + 4); // only care about estimated torques
   } else if (cmd == GET_ERROR) {
+    // Determine if there is an error
     uint32_t errors_raw = *reinterpret_cast<const uint32_t*>(msg.buf + 4);
     uint32_t errors = __builtin_bswap32(errors_raw);  
     if (errors == 0) return;
-
+    // Interpret errors
     if (!errored) {
       shutdown(true);
       Serial.println("!!!!!!!!!!!!ERROR DETECTED!!!!!!!!!!!!");
@@ -546,6 +557,12 @@ void can_sniff(const CAN_message_t& msg) {
   }
 }
 
+/**
+ * @brief Helper function to quickly send motor torque over a can bus
+ * 
+ * @param MOTOR Motor node ID configured on ODrive GUI
+ * @param torque Desired target torque (Nm, before gearing)
+ */
 void send_torque(int MOTOR, float torque) {
   CAN_message_t msg;
   msg.id = MOTOR | SET_TORQUE;  
@@ -554,10 +571,14 @@ void send_torque(int MOTOR, float torque) {
   Can2.write(msg);
 }
 
-void clear_errors(void) {
+/**
+ * @brief Clears any errors on any ODrives
+ */
+void clear_errors() {
   CAN_message_t msg;
   msg.len = 4;
-  int flash = 0;  
+  int flash = 0; // Don't flash while targeting
+  // Apply to all motors
   memcpy(msg.buf, &flash, 4);
   for (int i = 0; i < 3; ++i) {
     msg.id = MOTOR_IDS[i] | CLEAR_ERRORS;
@@ -566,10 +587,16 @@ void clear_errors(void) {
   }
 }
 
+/**
+ * @brief Allows motors to enter the Ready/Idle state
+ * 
+ * @param axis_state Axis state of ODrive. 1=idle, 8=ready.
+ */
 void set_motors_states(int axis_state) {
   CAN_message_t msg;
   msg.len = 4;
   memcpy(msg.buf, &axis_state, 4);
+  // Apply to all motors
   for (int i = 0; i < 3; ++i) {
     msg.id = MOTOR_IDS[i] | MOTOR_STATE;
     Can2.write(msg);
@@ -577,11 +604,15 @@ void set_motors_states(int axis_state) {
   }
 }
 
-void motors_reset_position(void) {
+/**
+ * @brief Resets the angular position to 0 of all motors
+ */
+void motors_reset_position() {
   float set_zero = 0;
   CAN_message_t msg;
   msg.len = 4;
   memcpy(msg.buf, &set_zero, 4);
+  // Apply to all motors
   for (int i = 0; i < 3; ++i) {
     msg.id = MOTOR_IDS[i] | SET_ABS_POS;
     Can2.write(msg);
@@ -589,6 +620,18 @@ void motors_reset_position(void) {
   }
 }
 
+/**
+ * @brief Calculates the ball rotation rate around X-axis. Used in controller.
+ * @param dp1 Wheel angular velocities ψ̇₁ (rad/s).
+ * @param dp2 Wheel angular velocities ψ̇₂ (rad/s).
+ * @param dp3 Wheel angular velocities ψ̇₃ (rad/s).
+ * @param dthx Rotation of body around X-axis.
+ * @param sX Sine of filtered roll.
+ * @param cX Cosine of filtered roll.
+ * @param sY Sine of filtered pitch.
+ * @param cY Cosine of filtered pitch.
+ * @return Rate of ball rotation (rad/s).
+ */
 float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, float cX, float sY, float cY) {
     float term1 = rW * (-2.0f * cY * CSC_35 + cX * SEC_35 * sY) * dp1;
     float term2 = rW * sY * (SQRT_3 * CSC_35 * sX * (-dp2 + dp3) + cX * SEC_35 * (dp2 + dp3));
@@ -596,13 +639,27 @@ float calc_phi_dot_x(float dp1, float dp2, float dp3, float dthx, float sX, floa
     return (1.0f / (3.0f * rB)) * (term1 + term2 + term3);
 }
 
+/**
+ * @brief Calculates the ball rotation rate around Y-axis. Used in controller.
+ * @param dp1 Wheel angular velocities ψ̇₁ (rad/s).
+ * @param dp2 Wheel angular velocities ψ̇₂ (rad/s).
+ * @param dp3 Wheel angular velocities ψ̇₃ (rad/s).
+ * @param dthy Rotation of body around Y-axis.
+ * @param sX Sine of filtered roll.
+ * @param cX Cosine of filtered roll.
+ * @return Rate of ball rotation (rad/s).
+ */
 float calc_phi_dot_y(float dp1, float dp2, float dp3, float dthy, float sX, float cX) {
     float term1 = SQRT_3 * cX * CSC_35 * (dp2 - dp3);
     float term2 = SEC_35 * sX * (dp1 + dp2 + dp3);
     return - (rW * (term1 + term2)) / (3.0f * rB) + dthy;
 }
 
+/**
+ * @brief Saves all logged data to a master file in CSV format.
+ */
 void save_all_data_to_one_CSV() {
+  // Display saving status
   unsigned long save_time = micros();
   char filename[40];
   sprintf(filename, "%lu_motor_data.csv", save_time);
@@ -610,14 +667,17 @@ void save_all_data_to_one_CSV() {
   Serial.print(" |  Creating master log: ");
   Serial.println(filename);
 
+  // Open file to write
   my_file = sd.open(filename, FILE_WRITE);
   if (!my_file) {
     Serial.println(" |  Failed to open master log!");
     return;
   }
 
+  // First line contains variable names
   my_file.println("Time_us,Roll,Pitch,GyroX,GyroY,GyroZ,T1,T2,T3,PhiX,PhiY,PhiDX,PhiDY,motor_vel_1,motor_vel_2,motor_vel_3,motor_pos_1,motor_pos_2,motor_pos_3,motor_torq_1,motor_torq_2,motor_torq_3");
 
+  // Cycle through all the buffers
   for (int i = 0; i < buff_pointer; i++) {
     my_file.print(time_buffer[i]);     my_file.print(",");
     my_file.print(roll_buffer[i], 4);  my_file.print(",");
@@ -641,10 +701,8 @@ void save_all_data_to_one_CSV() {
     my_file.print(motor_torq_1_buffer[i], 4); my_file.print(",");
     my_file.print(motor_torq_2_buffer[i], 4); my_file.print(",");
     my_file.println(motor_torq_3_buffer[i], 4);
-
-    
   }
-
+  // Close and display success.
   my_file.close();
   Serial.println(" |  Master log saved.");
 }
